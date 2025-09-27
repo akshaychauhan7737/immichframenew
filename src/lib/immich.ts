@@ -30,6 +30,10 @@ export async function getBuckets(): Promise<ImmichBucket[]> {
 export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
     const path = `/timeline/bucket?timeBucket=${encodeURIComponent(bucket)}`;
     const data: ImmichAssetsResponse = await immichFetch(path);
+    // Defensive check: if data.items is not present, return an empty array
+    if (!data || !data.items) {
+        return [];
+    }
     return data.items.map(item => ({
         ...item,
         type: item.type === 'VIDEO' ? 'VIDEO' : 'IMAGE'

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PT_Sans } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 const ptSans = PT_Sans({
@@ -25,12 +24,11 @@ export default function RootLayout({
       <head />
       <body
         className={cn(
-          "min-h-screen bg-background font-sans antialiased",
+          "min-h-screen bg-black font-sans antialiased",
           ptSans.variable
         )}
       >
         {children}
-        <Toaster />
       </body>
     </html>
   );

@@ -2,206 +2,186 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, X, Video } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { format } from "date-fns";
+import { LoaderCircle, Video } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { format } from 'date-fns';
+import { getNextBucketAssets } from "@/app/actions";
 
 type SlideshowClientProps = {
-  buckets: ImmichBucket[];
-  currentBucket: string;
-  assets: ImmichAsset[];
-  currentAsset: ImmichAsset;
+  initialBuckets: ImmichBucket[];
+  initialAssets: ImmichAsset[];
 };
 
 const IMAGE_DURATION_S = 5;
 
 export default function SlideshowClient({
-  buckets,
-  currentBucket,
-  assets,
-  currentAsset,
+  initialBuckets,
+  initialAssets,
 }: SlideshowClientProps) {
-  const router = useRouter();
+  const [buckets, setBuckets] = useState<ImmichBucket[]>(initialBuckets);
+  const [currentBucketIndex, setCurrentBucketIndex] = useState(0);
+  const [assets, setAssets] = useState<ImmichAsset[]>(initialAssets);
+  const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [now, setNow] = useState(new Date());
 
+  // Clock effect
   useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
+    const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const { currentIndex, nextAsset, prevAsset, nextBucket } = useMemo(() => {
-    const currentBucketIndex = buckets.findIndex(b => b.timeBucket === currentBucket);
-    const currentIndex = assets.findIndex((a) => a.id === currentAsset.id);
+  const currentAsset = useMemo(() => assets[currentAssetIndex], [assets, currentAssetIndex]);
+  const currentBucket = useMemo(() => buckets[currentBucketIndex], [buckets, currentBucketIndex]);
 
-    let nextAsset: ImmichAsset | undefined;
-    let prevAsset: ImmichAsset | undefined;
-    let nextBucket: ImmichBucket | undefined;
-
-    if (currentIndex > -1) {
-      nextAsset = assets[currentIndex + 1];
-      prevAsset = assets[currentIndex - 1];
-    }
-    
-    if (currentBucketIndex > -1) {
-      if(!nextAsset) {
-        nextBucket = buckets[currentBucketIndex + 1];
+  const navigateToNext = async () => {
+    if (currentAssetIndex < assets.length - 1) {
+      setCurrentAssetIndex(prev => prev + 1);
+    } else {
+      let nextBucketIndex = currentBucketIndex + 1;
+      if (nextBucketIndex >= buckets.length) {
+        nextBucketIndex = 0; // Loop back to the first bucket
+      }
+      
+      setCurrentBucketIndex(nextBucketIndex);
+      const nextBucket = buckets[nextBucketIndex];
+      
+      if (nextBucket) {
+        setIsLoading(true);
+        try {
+          const nextAssets = await getNextBucketAssets(nextBucket.timeBucket);
+          if (nextAssets.length > 0) {
+            setAssets(nextAssets);
+            setCurrentAssetIndex(0);
+          } else {
+             // If bucket is empty, try the next one
+             navigateToNext();
+          }
+        } catch (error) {
+          console.error("Failed to load next bucket assets", error);
+           // If there's an error, try the next one
+           navigateToNext();
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
+  };
 
-    return { currentIndex, nextAsset, prevAsset, nextBucket };
-  }, [assets, currentAsset.id, buckets, currentBucket]);
-
-  const navigateToNext = () => {
-    if (nextAsset) {
-      router.push(`/slideshow/${currentBucket}/${nextAsset.id}`);
-    } else if (nextBucket) {
-      // If there's no next asset in this bucket, go to the first asset of the next bucket
-      router.push(`/slideshow/${nextBucket.timeBucket}`);
-    } else if (buckets.length > 0) {
-      // If it's the last bucket, loop back to the first one
-      router.push(`/slideshow/${buckets[0].timeBucket}`);
-    } else {
-      router.push('/');
+  const navigateToPrev = () => {
+    if (currentAssetIndex > 0) {
+      setCurrentAssetIndex(prev => prev - 1);
     }
   };
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") {
-        navigateToNext();
-      } else if (e.key === "ArrowLeft" && prevAsset) {
-        router.push(`/slideshow/${currentBucket}/${prevAsset.id}`);
-      } else if (e.key === "Escape") {
-        router.push(`/slideshow/${currentBucket}`);
-      }
+      if (e.key === "ArrowRight") navigateToNext();
+      else if (e.key === "ArrowLeft") navigateToPrev();
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextAsset, prevAsset, router, currentBucket, navigateToNext]);
+  }, [assets, currentAssetIndex, buckets, currentBucketIndex]);
 
-  const isVideo = currentAsset.livePhotoVideoId || !currentAsset.isImage;
+  const isVideo = currentAsset?.livePhotoVideoId || (currentAsset && !currentAsset.isImage);
 
   // Auto-advance logic
   useEffect(() => {
+    if (isLoading || !currentAsset) return;
+
+    let timer: NodeJS.Timeout;
     if (isVideo) {
       const videoElement = videoRef.current;
       if (videoElement) {
         const handleVideoEnd = () => navigateToNext();
-        videoElement.addEventListener('ended', handleVideoEnd);
-        return () => videoElement.removeEventListener('ended', handleVideoEnd);
+        videoElement.addEventListener("ended", handleVideoEnd);
+        videoElement.play().catch(console.error);
+        return () => videoElement.removeEventListener("ended", handleVideoEnd);
       }
     } else {
-      const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
-      return () => clearTimeout(timer);
+      timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
     }
-  }, [currentAsset.id, isVideo, navigateToNext]);
-
+    return () => clearTimeout(timer);
+  }, [currentAsset, isLoading]);
 
   // Prefetching logic
   useEffect(() => {
-    // Preload next image in the sequence
+    const nextAsset = assets[currentAssetIndex + 1];
     if (nextAsset?.isImage) {
       const link = document.createElement("link");
       link.rel = "preload";
       link.as = "image";
       link.href = `/api/immich/asset/${nextAsset.id}/thumbnail?size=preview`;
       document.head.appendChild(link);
-      return () => {
-        document.head.removeChild(link);
-      };
+      return () => { document.head.removeChild(link); };
     }
-  }, [nextAsset]);
-
-  const assetDate = new Date(currentAsset.fileCreatedAt);
-  const videoSrc = `/api/immich/asset/${currentAsset.id}/video/playback`;
-  const imageSrc = `/api/immich/asset/${currentAsset.id}/thumbnail?size=preview`;
+  }, [assets, currentAssetIndex]);
+  
+  const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
+  const videoSrc = currentAsset ? `/api/immich/asset/${currentAsset.id}/video/playback` : "";
+  const imageSrc = currentAsset ? `/api/immich/asset/${currentAsset.id}/thumbnail?size=preview` : "";
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black text-white flex flex-col">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 text-white">
-        <div>
-          <h3 className="font-bold">{format(assetDate, "MMMM d, yyyy")}</h3>
-          <p className="text-sm text-white/80">{format(assetDate, "h:mm a")}</p>
-        </div>
-        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white" asChild>
-          <Link href={`/slideshow/${currentBucket}`}>
-            <X className="h-6 w-6" />
-            <span className="sr-only">Close</span>
-          </Link>
-        </Button>
-      </header>
-      
+      {currentAsset && (
+        <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
+          <div>
+            <h3 className="font-bold">{format(assetDate, "MMMM d, yyyy")}</h3>
+            <p className="text-sm text-white/80">{format(assetDate, "h:mm a")}</p>
+          </div>
+        </header>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center min-h-0">
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={currentAsset.id}
-            className="w-full h-full flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            {isVideo ? (
-              <video
-                ref={videoRef}
-                key={currentAsset.id}
-                controls
-                autoPlay
-                muted
-                playsInline
-                className="max-h-full max-w-full object-contain"
-              >
-                <source src={videoSrc} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <Image
-                src={imageSrc}
-                alt={`Asset from ${currentAsset.fileCreatedAt}`}
-                fill
-                className="object-contain"
-                priority
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {(isLoading || !currentAsset) ? (
+            <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
+        ) : (
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={currentAsset.id}
+              className="w-full h-full flex items-center justify-center"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              {isVideo ? (
+                <video
+                  ref={videoRef}
+                  key={currentAsset.id}
+                  muted
+                  playsInline
+                  className="max-h-full max-w-full object-contain"
+                >
+                  <source src={videoSrc} type="video/mp4" />
+                </video>
+              ) : (
+                <Image
+                  src={imageSrc}
+                  alt={`Asset from ${currentAsset.fileCreatedAt}`}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
-      
+
       {/* Footer */}
-      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 text-white">
-         <div>
+      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-t from-black/50 to-transparent">
+        <div>
           <h3 className="font-bold">{format(now, "MMMM d, yyyy")}</h3>
           <p className="text-sm text-white/80">{format(now, "h:mm:ss a")}</p>
         </div>
       </footer>
-
-      {/* Navigation */}
-      {prevAsset && (
-        <Button variant="ghost" size="icon" className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white h-12 w-12 hover:bg-white/10 hover:text-white" asChild>
-          <Link href={`/slideshow/${currentBucket}/${prevAsset.id}`} scroll={false}>
-            <ChevronLeft className="h-8 w-8" />
-            <span className="sr-only">Previous</span>
-          </Link>
-        </Button>
-      )}
-
-      
-      <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white h-12 w-12 hover:bg-white/10 hover:text-white" onClick={navigateToNext}>
-          <ChevronRight className="h-8 w-8" />
-          <span className="sr-only">Next</span>
-      </Button>
     </div>
   );
 }

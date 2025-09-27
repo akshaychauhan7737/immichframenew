@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  slideshow:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # --- Immich Server Configuration ---
+      # Replace with your Immich server's local network URL
+      - NEXT_PUBLIC_IMMICH_API_URL=http://YOUR_IMMICH_IP:2283
+      # Replace with your Immich API Key
+      - NEXT_PUBLIC_IMMICH_API_KEY=YOUR_IMMICH_API_KEY
+
+      # --- Slideshow Settings (Optional) ---
+      # The duration (in seconds) each image is displayed. Defaults to 5.
+      - NEXT_PUBLIC_SLIDESHOW_DURATION_S=5
+    restart: unless-stopped

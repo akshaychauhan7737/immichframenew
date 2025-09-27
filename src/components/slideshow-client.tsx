@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, MapPin } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl } from "@/lib/immich";
+import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl, getAssetById } from "@/lib/immich";
 
 const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
@@ -27,6 +27,7 @@ export default function SlideshowClient({
   const [currentBucketIndex, setCurrentBucketIndex] = useState(initialBucketIndex);
   const [assets, setAssets] = useState<ImmichAsset[]>(initialAssets);
   const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
+  const [detailedAsset, setDetailedAsset] = useState<ImmichAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [now, setNow] = useState(new Date());
   
@@ -40,8 +41,33 @@ export default function SlideshowClient({
 
   const currentAsset = useMemo(() => assets[currentAssetIndex], [assets, currentAssetIndex]);
 
+  // Fetch detailed asset info when currentAsset changes
+  useEffect(() => {
+    if (currentAsset) {
+      let isCancelled = false;
+      const fetchDetails = async () => {
+        try {
+          const details = await getAssetById(currentAsset.id);
+          if (!isCancelled) {
+            setDetailedAsset(details);
+          }
+        } catch (error) {
+          console.error("Failed to fetch asset details", error);
+          if (!isCancelled) {
+            // Fallback to basic asset info
+            setDetailedAsset(currentAsset);
+          }
+        }
+      };
+      fetchDetails();
+      return () => { isCancelled = true; };
+    }
+  }, [currentAsset]);
+
   const navigateToNext = async () => {
     if (isLoading) return;
+
+    setDetailedAsset(null); // Clear details for next asset
 
     if (currentAssetIndex < assets.length - 1) {
       setCurrentAssetIndex(prev => prev + 1);
@@ -113,6 +139,11 @@ export default function SlideshowClient({
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
+  const locationParts = [
+      detailedAsset?.exifInfo?.city,
+      detailedAsset?.exifInfo?.state,
+  ].filter(Boolean);
+  const locationString = locationParts.join(', ');
   
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
@@ -121,29 +152,35 @@ export default function SlideshowClient({
         {currentAsset ? (
           <div>
             <h3 className="font-bold text-lg md:text-xl text-white/90">{format(assetDate, "MMMM d, yyyy")}</h3>
+            {locationString && (
+                 <div className="flex items-center gap-2 text-base md:text-lg text-white/80 mt-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{locationString}</span>
+                </div>
+            )}
           </div>
         ) : <div />}
       </header>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center min-h-0">
-        {(isLoading && !currentAsset) ? (
+        {(isLoading && !currentAsset) || !detailedAsset ? (
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         ) : (
           <AnimatePresence initial={false}>
-            {currentAsset && (
+            {detailedAsset && (
                 <motion.div
-                key={currentAsset.id}
+                key={detailedAsset.id}
                 className="w-full h-full flex items-center justify-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 >
-                    {currentAsset.type === 'IMAGE' ? (
+                    {detailedAsset.type === 'IMAGE' ? (
                         <Image
-                        src={getImageUrl(currentAsset)}
-                        alt={`Asset from ${currentAsset.fileCreatedAt}`}
+                        src={getImageUrl(detailedAsset)}
+                        alt={`Asset from ${detailedAsset.fileCreatedAt}`}
                         fill
                         className="object-contain"
                         priority
@@ -152,8 +189,8 @@ export default function SlideshowClient({
                     ) : (
                         <video
                             ref={videoRef}
-                            src={getVideoUrl(currentAsset)}
-                            poster={getThumbnailUrl(currentAsset)}
+                            src={getVideoUrl(detailedAsset)}
+                            poster={getThumbnailUrl(detailedAsset)}
                             autoPlay
                             playsInline
                             muted

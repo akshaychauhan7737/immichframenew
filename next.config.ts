@@ -14,22 +14,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  async rewrites() {
-    const immichApiUrl = process.env.NEXT_PUBLIC_IMMICH_API_URL;
-    if (!immichApiUrl) {
-      return [];
-    }
-    return [
-      {
-        source: '/api/immich/timeline/buckets',
-        destination: `${immichApiUrl}/api/timeline/buckets`,
-      },
-       {
-        source: '/api/immich/timeline/bucket',
-        destination: `${immichApiUrl}/api/timeline/bucket`,
-      },
-    ]
-  },
   images: {
     remotePatterns: [
       {

@@ -3,17 +3,18 @@ import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "./types";
 const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
 const API_BASE_PATH = "/api/immich";
 
-async function immichFetch(path: string) {
+async function immichFetch(path: string, options: RequestInit = {}) {
     if (!IMMICH_API_KEY) {
         throw new Error("Immich API Key is not configured in environment variables.");
     }
     const headers = {
         "x-api-key": IMMICH_API_KEY!,
         "Accept": "application/json",
+        ...options.headers,
     };
     const url = `${API_BASE_PATH}${path}`;
 
-    const response = await fetch(url, { headers, cache: "no-store" });
+    const response = await fetch(url, { ...options, headers, cache: "no-store" });
 
     if (!response.ok) {
         const errorBody = await response.text();
@@ -27,49 +28,36 @@ export async function getBuckets(): Promise<ImmichBucket[]> {
 }
 
 export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
-    const path = `/timeline/bucket?timeBucket=${encodeURIComponent(
-        `${bucket}T00:00:00.000Z`
-    )}&visibility=timeline&withPartners=true&withStacked=true`;
-    
+    const path = `/timeline/bucket?timeBucket=${encodeURIComponent(bucket)}`;
     const data: ImmichAssetsResponse = await immichFetch(path);
-    
-    if (!data.id || !Array.isArray(data.id)) return [];
-
-    const assets: ImmichAsset[] = data.id.map((id: string, index: number) => ({
-      id,
-      fileCreatedAt: data.fileCreatedAt[index],
-      isFavorite: data.isFavorite[index],
-      isImage: data.isImage[index],
-      duration: data.duration[index],
-      thumbhash: data.thumbhash[index],
-      livePhotoVideoId: data.livePhotoVideoId[index],
+    return data.items.map(item => ({
+        ...item,
+        type: item.type === 'VIDEO' ? 'VIDEO' : 'IMAGE'
     }));
-
-    // No longer filtering out videos
-    return assets;
 }
+
+export async function getAssetById(assetId: string): Promise<ImmichAsset> {
+    const asset = await immichFetch(`/assets/${assetId}`);
+    return {
+        ...asset,
+        type: asset.type === 'VIDEO' ? 'VIDEO' : 'IMAGE'
+    };
+}
+
 
 export async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]> {
     return getAssetsForBucket(bucket);
 }
 
 export function getImageUrl(asset: ImmichAsset): string {
-    if (!asset.isImage) return "";
+    if (asset.type !== 'IMAGE') return "";
     let params = `?size=preview`;
-    if (asset.thumbhash) {
-        params += `&thumbhash=${encodeURIComponent(asset.thumbhash)}`;
-    }
     return `/api/image-proxy/${asset.id}${params}`;
 }
 
 export function getVideoUrl(asset: ImmichAsset): string {
-    if (asset.isImage) return "";
-    let params = ``;
-    if (asset.thumbhash) {
-        params = `?c=${encodeURIComponent(asset.thumbhash)}`;
-    }
-    // Use the new proxy route for videos
-    return `/api/video-proxy/${asset.id}${params}`;
+    if (asset.type !== 'VIDEO') return "";
+    return `/api/video-proxy/${asset.id}`;
 }
 
 export function getThumbnailUrl(asset: ImmichAsset): string {

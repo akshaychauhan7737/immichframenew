@@ -98,14 +98,14 @@ export default function SlideshowClient({
       const nextAsset = assets[currentAssetIndex + 1];
       if (nextAsset && nextAsset.isImage) { 
         const img = new window.Image();
-        img.src = getAssetUrl(nextAsset, 'thumbnail');
+        img.src = getAssetUrl(nextAsset);
       }
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   
-  const imageSrc = currentAsset ? getAssetUrl(currentAsset, 'thumbnail') : "";
+  const imageSrc = currentAsset && currentAsset.isImage ? getAssetUrl(currentAsset) : "";
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">

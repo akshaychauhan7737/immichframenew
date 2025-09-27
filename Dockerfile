@@ -1,24 +1,37 @@
-# 1. Install dependencies
-FROM node:20-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Dockerfile
 
-# 2. Build the app
+# --- Build Stage ---
 FROM node:20-alpine AS builder
+
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+# Copy package.json and package-lock.json (if available)
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application source code
 COPY . .
+
+# Build the Next.js application
 RUN npm run build
 
-# 3. Run the app
+# --- Runner Stage ---
 FROM node:20-alpine AS runner
+
 WORKDIR /app
+
+# Set environment to production
 ENV NODE_ENV=production
-COPY --from=builder /app/public ./public
+
+# Copy built assets from the builder stage
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
+# Expose the port the app runs on
 EXPOSE 3000
+
+# Start the application
 CMD ["npm", "start"]

@@ -29,12 +29,32 @@ export async function getBuckets(): Promise<ImmichBucket[]> {
 
 export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
     const path = `/timeline/bucket?timeBucket=${encodeURIComponent(bucket)}`;
-    const data: ImmichAssetsResponse = await immichFetch(path);
-    // Defensive check: if data.items is not present, return an empty array
-    if (!data || !data.items) {
+    const data: any = await immichFetch(path);
+
+    // Handle columnar/SoA format vs standard array of objects/AoS format
+    if (data && Array.isArray(data.id) && !data.items) {
+        const assets: ImmichAsset[] = [];
+        const count = data.id.length;
+        for (let i = 0; i < count; i++) {
+            assets.push({
+                id: data.id[i],
+                fileCreatedAt: data.fileCreatedAt[i],
+                isFavorite: data.isFavorite[i],
+                type: data.isImage[i] ? 'IMAGE' : 'VIDEO',
+                duration: data.duration[i],
+                thumbhash: data.thumbhash[i],
+                livePhotoVideoId: data.livePhotoVideoId[i],
+            });
+        }
+        return assets;
+    }
+
+    // Handle standard AoS format
+    const responseData = data as ImmichAssetsResponse;
+    if (!responseData || !responseData.items) {
         return [];
     }
-    return data.items.map(item => ({
+    return responseData.items.map(item => ({
         ...item,
         type: item.type === 'VIDEO' ? 'VIDEO' : 'IMAGE'
     }));

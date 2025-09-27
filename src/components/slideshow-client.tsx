@@ -11,22 +11,25 @@ import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl, getAsse
 
 const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
+const STORAGE_KEY = "slideshow_state";
 
 interface SlideshowClientProps {
     initialBuckets: ImmichBucket[];
     initialAssets: ImmichAsset[];
     initialBucketIndex: number;
+    initialAssetIndex: number;
 }
 
 export default function SlideshowClient({
   initialBuckets,
   initialAssets,
   initialBucketIndex,
+  initialAssetIndex,
 }: SlideshowClientProps) {
   const [buckets] = useState<ImmichBucket[]>(initialBuckets);
   const [currentBucketIndex, setCurrentBucketIndex] = useState(initialBucketIndex);
   const [assets, setAssets] = useState<ImmichAsset[]>(initialAssets);
-  const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
+  const [currentAssetIndex, setCurrentAssetIndex] = useState(initialAssetIndex);
   const [detailedAsset, setDetailedAsset] = useState<ImmichAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [now, setNow] = useState(new Date());
@@ -40,6 +43,19 @@ export default function SlideshowClient({
   }, []);
 
   const currentAsset = useMemo(() => assets[currentAssetIndex], [assets, currentAssetIndex]);
+  const currentBucket = useMemo(() => buckets[currentBucketIndex], [buckets, currentBucketIndex]);
+
+  // Save state to localStorage whenever the asset or bucket changes
+  useEffect(() => {
+    if (currentBucket && currentAsset) {
+      const state = {
+        bucketTime: currentBucket.timeBucket,
+        assetId: currentAsset.id,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+  }, [currentBucket, currentAsset]);
+
 
   // Fetch detailed asset info when currentAsset changes
   useEffect(() => {
@@ -83,19 +99,26 @@ export default function SlideshowClient({
         setIsLoading(true);
         try {
           let nextAssets: ImmichAsset[] = [];
-          while (nextAssets.length === 0) {
-            nextAssets = await getNextBucketAssets(buckets[nextBucketIndex].timeBucket);
-            if (nextAssets.length > 0) {
-                setAssets(nextAssets);
-                setCurrentBucketIndex(nextBucketIndex);
-                setCurrentAssetIndex(0);
-            } else {
-                nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
-                if (nextBucketIndex === currentBucketIndex) {
-                    console.error("No assets found in any bucket.");
-                    break;
+          // Loop through buckets until we find one with assets
+          let attempts = 0;
+          while (nextAssets.length === 0 && attempts < buckets.length) {
+            const bucketToTry = buckets[nextBucketIndex];
+            if (bucketToTry) {
+                nextAssets = await getNextBucketAssets(bucketToTry.timeBucket);
+                if (nextAssets.length > 0) {
+                    setAssets(nextAssets);
+                    setCurrentBucketIndex(nextBucketIndex);
+                    setCurrentAssetIndex(0);
+                } else {
+                    nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
                 }
+            } else {
+                 nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
             }
+            attempts++;
+          }
+          if (attempts >= buckets.length) {
+             console.error("No assets found in any bucket after full loop.");
           }
         } catch (error) {
           console.error("Failed to load next bucket assets", error);

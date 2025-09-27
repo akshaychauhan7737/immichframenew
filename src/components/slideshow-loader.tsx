@@ -8,12 +8,19 @@ import SlideshowClient from "@/components/slideshow-client";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { getBuckets, getAssetsForBucket } from "@/lib/immich";
 
+const STORAGE_KEY = "slideshow_state";
+
+interface SlideshowState {
+  bucketTime: string;
+  assetId: string;
+}
 
 export default function SlideshowLoader() {
   const [data, setData] = useState<{
     buckets: ImmichBucket[];
     assets: ImmichAsset[];
     bucketIndex: number;
+    assetIndex: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
@@ -29,37 +36,73 @@ export default function SlideshowLoader() {
 
     const fetchData = async () => {
       try {
+        // 1. Get all available buckets
         const buckets = await getBuckets();
-        if (isCancelled) return;
-
-        if (!buckets || buckets.length === 0) {
+        if (isCancelled || !buckets || buckets.length === 0) {
           throw new Error("No buckets found or failed to connect to Immich.");
         }
-        
-        // Find the first non-empty bucket
-        let firstAssets: ImmichAsset[] = [];
-        let firstBucketIndex = 0;
-        for (let i = 0; i < buckets.length; i++) {
-            const assets = await getAssetsForBucket(buckets[i].timeBucket);
-            if (isCancelled) return;
-            if (assets.length > 0) {
-                firstAssets = assets;
-                firstBucketIndex = i;
-                break;
-            }
+
+        // 2. Check for a saved state in localStorage
+        const savedStateJSON = localStorage.getItem(STORAGE_KEY);
+        let savedState: SlideshowState | null = null;
+        if (savedStateJSON) {
+          try {
+            savedState = JSON.parse(savedStateJSON);
+          } catch (e) {
+            console.error("Failed to parse saved state, starting over.", e);
+            localStorage.removeItem(STORAGE_KEY);
+          }
         }
         
-        if (firstAssets.length === 0) {
+        let initialAssets: ImmichAsset[] = [];
+        let initialBucketIndex = -1;
+        let initialAssetIndex = 0;
+
+        // 3. Try to resume from saved state
+        if (savedState) {
+            const resumeBucketIndex = buckets.findIndex(b => b.timeBucket === savedState!.bucketTime);
+            if (resumeBucketIndex !== -1) {
+                const assets = await getAssetsForBucket(buckets[resumeBucketIndex].timeBucket);
+                if (!isCancelled && assets.length > 0) {
+                    const resumeAssetIndex = assets.findIndex(a => a.id === savedState!.assetId);
+                    if (resumeAssetIndex !== -1) {
+                        initialAssets = assets;
+                        initialBucketIndex = resumeBucketIndex;
+                        initialAssetIndex = resumeAssetIndex;
+                    }
+                }
+            }
+             // If resuming fails for any reason, clear saved state and start fresh
+            if (initialBucketIndex === -1) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+
+
+        // 4. If not resuming, find the first non-empty bucket to start
+        if (initialBucketIndex === -1) {
+            for (let i = 0; i < buckets.length; i++) {
+                const assets = await getAssetsForBucket(buckets[i].timeBucket);
+                if (isCancelled) return;
+                if (assets.length > 0) {
+                    initialAssets = assets;
+                    initialBucketIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (initialAssets.length === 0) {
             throw new Error("No assets found in any available buckets.");
         }
 
-        setData({ buckets, assets: firstAssets, bucketIndex: firstBucketIndex });
+        setData({ buckets, assets: initialAssets, bucketIndex: initialBucketIndex, assetIndex: initialAssetIndex });
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;
         setError(e.message || "An unknown error occurred.");
-        // Retry after 3 seconds
-        retryTimeout = setTimeout(fetchData, 3000);
+        // Retry after 5 seconds
+        retryTimeout = setTimeout(fetchData, 5000);
       }
     };
 
@@ -134,6 +177,7 @@ export default function SlideshowLoader() {
       initialBuckets={data.buckets}
       initialAssets={data.assets}
       initialBucketIndex={data.bucketIndex}
+      initialAssetIndex={data.assetIndex}
     />
   );
 }

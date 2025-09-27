@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,8 +10,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { prefetchSimilarMedia } from "@/app/actions";
-import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 
 type SlideshowClientProps = {
@@ -28,19 +26,23 @@ export default function SlideshowClient({
   currentAsset,
 }: SlideshowClientProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [now, setNow] = useState(new Date());
 
-  const { currentIndex, nextAsset, prevAsset, nextBucket } = useMemo(() => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const { currentIndex, nextAsset, prevAsset } = useMemo(() => {
     const currentIndex = assets.findIndex((a) => a.id === currentAsset.id);
     const nextAsset = currentIndex > -1 ? assets[currentIndex + 1] : undefined;
     const prevAsset = currentIndex > -1 ? assets[currentIndex - 1] : undefined;
     
-    const currentBucketIndex = buckets.findIndex(b => b.timeBucket === currentBucket);
-    const nextBucket = currentBucketIndex > -1 ? buckets[currentBucketIndex -1] : undefined; // Buckets are sorted descending
-
-    return { currentIndex, nextAsset, prevAsset, nextBucket };
-  }, [assets, currentAsset.id, buckets, currentBucket]);
+    return { currentIndex, nextAsset, prevAsset };
+  }, [assets, currentAsset.id]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function SlideshowClient({
       if (e.key === "ArrowRight" && nextAsset) {
         router.push(`/slideshow/${currentBucket}/${nextAsset.id}`);
       } else if (e.key === "ArrowLeft" && prevAsset) {
-        router.push(`/slideshow/${currentBucket}/${prevAsset.id}`);
+        router.push(`/slideshow/${currentBucket}`);
       } else if (e.key === "Escape") {
         router.push(`/slideshow/${currentBucket}`);
       }
@@ -72,39 +74,6 @@ export default function SlideshowClient({
       };
     }
   }, [nextAsset]);
-
-  // AI-based prefetching for next bucket
-  useEffect(() => {
-    let isCancelled = false;
-    const isVideo = currentAsset.livePhotoVideoId || !currentAsset.isImage;
-
-    const playHandler = async () => {
-      // Prefetch when near the end of the current bucket
-      if (currentIndex >= assets.length - 5 && nextBucket && !isCancelled) {
-        console.log(`Nearing end of bucket, prefetching for ${nextBucket.timeBucket}`);
-        toast({
-          title: "Prefetching next month...",
-          description: `Getting ${nextBucket.timeBucket} ready.`,
-        });
-        await prefetchSimilarMedia(nextBucket.timeBucket, currentAsset.id);
-      }
-    };
-    
-    if (isVideo && videoRef.current) {
-      videoRef.current.addEventListener('play', playHandler);
-    } else if (currentIndex >= assets.length - 5) {
-        // also prefetch for images near end
-        playHandler();
-    }
-
-    return () => {
-      isCancelled = true;
-      if (videoRef.current) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        videoRef.current.removeEventListener('play', playHandler);
-      }
-    };
-  }, [currentIndex, assets.length, nextBucket, currentAsset.id, toast, currentAsset.isImage, currentAsset.livePhotoVideoId]);
 
   const assetDate = new Date(currentAsset.fileCreatedAt);
   const isVideo = currentAsset.livePhotoVideoId || !currentAsset.isImage;
@@ -163,6 +132,14 @@ export default function SlideshowClient({
           </motion.div>
         </AnimatePresence>
       </div>
+      
+      {/* Footer */}
+      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 text-white">
+         <div>
+          <h3 className="font-bold">{format(now, "MMMM d, yyyy")}</h3>
+          <p className="text-sm text-white/80">{format(now, "h:mm:ss a")}</p>
+        </div>
+      </footer>
 
       {/* Navigation */}
       {prevAsset && (

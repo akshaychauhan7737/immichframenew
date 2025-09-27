@@ -130,10 +130,10 @@ export default function SlideshowClient({
     <div className="fixed inset-0 bg-black text-white flex flex-col">
       {/* Header */}
       {currentAsset && (
-        <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
+        <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
           <div>
-            <h3 className="font-bold text-lg">{format(assetDate, "MMMM d, yyyy")}</h3>
-            <p className="text-base text-white/80">{format(assetDate, "h:mm a")}</p>
+            <h3 className="font-bold text-xl md:text-2xl">{format(assetDate, "MMMM d, yyyy")}</h3>
+            <p className="text-lg md:text-xl text-white/80">{format(assetDate, "h:mm a")}</p>
           </div>
         </header>
       )}
@@ -168,13 +168,13 @@ export default function SlideshowClient({
       </div>
 
       {/* Footer */}
-      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-t from-black/50 to-transparent">
+      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
         <div>
           {/* This space is intentionally left blank */}
         </div>
         <div className="text-right">
-            <h3 className="font-bold text-2xl">{format(now, "h:mm")}</h3>
-            <p className="text-xl text-white/80">{format(now, "a")}</p>
+            <h3 className="font-bold text-5xl md:text-7xl leading-none">{format(now, "h:mm")}</h3>
+            <p className="text-2xl md:text-4xl text-white/80">{format(now, "a")}</p>
         </div>
       </footer>
     </div>

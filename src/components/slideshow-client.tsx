@@ -281,16 +281,16 @@ export default function SlideshowClient({
 
       {/* Footer */}
       <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
-        <div>
+        <div className="flex flex-col">
           <h3 className="font-bold text-lg md:text-xl text-white/90">
             {format(now, "EEEE, MMMM d")}
           </h3>
           <Weather />
         </div>
         <div className="text-right">
-            <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">
+            <h3 className="font-bold text-6xl md:text-7xl leading-none whitespace-nowrap">
               {format(now, "h:mm")}
-              <span className="text-2xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+              <span className="text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
             </h3>
         </div>
       </footer>

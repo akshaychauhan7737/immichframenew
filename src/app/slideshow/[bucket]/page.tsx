@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { redirect } from "next/navigation";
 
 export default async function BucketPage({
   params,
@@ -11,6 +12,12 @@ export default async function BucketPage({
   params: { bucket: string };
 }) {
   const assets = await getAssetsForBucket(params.bucket);
+
+  // If the bucket itself has assets, redirect to the first one to start the slideshow.
+  if (assets && assets.length > 0) {
+    redirect(`/slideshow/${params.bucket}/${assets[0].id}`);
+  }
+  
   const date = new Date(params.bucket);
   const title = date.toLocaleString("default", {
     month: "long",
@@ -31,31 +38,11 @@ export default async function BucketPage({
           <p className="text-muted-foreground">{assets.length} items</p>
         </div>
       </header>
-
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
-        {assets.map((asset) => (
-          <Link
-            href={`/slideshow/${params.bucket}/${asset.id}`}
-            key={asset.id}
-            className="group relative aspect-square overflow-hidden rounded-md"
-          >
-            <Image
-              src={`/api/immich/asset/${asset.id}/thumbnail`}
-              alt="Immich asset"
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            {!asset.isImage && (
-              <Video className="absolute bottom-1 right-1 h-5 w-5 text-white/80" />
-            )}
-            {asset.isFavorite && (
-              <Badge variant="destructive" className="absolute top-1 left-1">
-                Favorite
-              </Badge>
-            )}
-          </Link>
-        ))}
+       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center p-4">
+        <h2 className="text-2xl font-semibold">No Assets Found</h2>
+        <p className="mt-2 text-muted-foreground">
+          This photo album is empty.
+        </p>
       </div>
     </div>
   );

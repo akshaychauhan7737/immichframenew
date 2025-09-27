@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X, Video } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { cn } from "@/lib/utils";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
@@ -18,6 +17,8 @@ type SlideshowClientProps = {
   assets: ImmichAsset[];
   currentAsset: ImmichAsset;
 };
+
+const IMAGE_DURATION_S = 5;
 
 export default function SlideshowClient({
   buckets,
@@ -36,21 +37,49 @@ export default function SlideshowClient({
     return () => clearInterval(interval);
   }, []);
 
-  const { currentIndex, nextAsset, prevAsset } = useMemo(() => {
+  const { currentIndex, nextAsset, prevAsset, nextBucket } = useMemo(() => {
+    const currentBucketIndex = buckets.findIndex(b => b.timeBucket === currentBucket);
     const currentIndex = assets.findIndex((a) => a.id === currentAsset.id);
-    const nextAsset = currentIndex > -1 ? assets[currentIndex + 1] : undefined;
-    const prevAsset = currentIndex > -1 ? assets[currentIndex - 1] : undefined;
+
+    let nextAsset: ImmichAsset | undefined;
+    let prevAsset: ImmichAsset | undefined;
+    let nextBucket: ImmichBucket | undefined;
+
+    if (currentIndex > -1) {
+      nextAsset = assets[currentIndex + 1];
+      prevAsset = assets[currentIndex - 1];
+    }
     
-    return { currentIndex, nextAsset, prevAsset };
-  }, [assets, currentAsset.id]);
+    if (currentBucketIndex > -1) {
+      if(!nextAsset) {
+        nextBucket = buckets[currentBucketIndex + 1];
+      }
+    }
+
+    return { currentIndex, nextAsset, prevAsset, nextBucket };
+  }, [assets, currentAsset.id, buckets, currentBucket]);
+
+  const navigateToNext = () => {
+    if (nextAsset) {
+      router.push(`/slideshow/${currentBucket}/${nextAsset.id}`);
+    } else if (nextBucket) {
+      // If there's no next asset in this bucket, go to the first asset of the next bucket
+      router.push(`/slideshow/${nextBucket.timeBucket}`);
+    } else if (buckets.length > 0) {
+      // If it's the last bucket, loop back to the first one
+      router.push(`/slideshow/${buckets[0].timeBucket}`);
+    } else {
+      router.push('/');
+    }
+  };
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" && nextAsset) {
-        router.push(`/slideshow/${currentBucket}/${nextAsset.id}`);
+      if (e.key === "ArrowRight") {
+        navigateToNext();
       } else if (e.key === "ArrowLeft" && prevAsset) {
-        router.push(`/slideshow/${currentBucket}`);
+        router.push(`/slideshow/${currentBucket}/${prevAsset.id}`);
       } else if (e.key === "Escape") {
         router.push(`/slideshow/${currentBucket}`);
       }
@@ -58,7 +87,25 @@ export default function SlideshowClient({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextAsset, prevAsset, router, currentBucket]);
+  }, [nextAsset, prevAsset, router, currentBucket, navigateToNext]);
+
+  const isVideo = currentAsset.livePhotoVideoId || !currentAsset.isImage;
+
+  // Auto-advance logic
+  useEffect(() => {
+    if (isVideo) {
+      const videoElement = videoRef.current;
+      if (videoElement) {
+        const handleVideoEnd = () => navigateToNext();
+        videoElement.addEventListener('ended', handleVideoEnd);
+        return () => videoElement.removeEventListener('ended', handleVideoEnd);
+      }
+    } else {
+      const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentAsset.id, isVideo, navigateToNext]);
+
 
   // Prefetching logic
   useEffect(() => {
@@ -76,7 +123,6 @@ export default function SlideshowClient({
   }, [nextAsset]);
 
   const assetDate = new Date(currentAsset.fileCreatedAt);
-  const isVideo = currentAsset.livePhotoVideoId || !currentAsset.isImage;
   const videoSrc = `/api/immich/asset/${currentAsset.id}/video/playback`;
   const imageSrc = `/api/immich/asset/${currentAsset.id}/thumbnail?size=preview`;
 
@@ -151,14 +197,11 @@ export default function SlideshowClient({
         </Button>
       )}
 
-      {nextAsset && (
-        <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white h-12 w-12 hover:bg-white/10 hover:text-white" asChild>
-          <Link href={`/slideshow/${currentBucket}/${nextAsset.id}`} scroll={false}>
-            <ChevronRight className="h-8 w-8" />
-            <span className="sr-only">Next</span>
-          </Link>
-        </Button>
-      )}
+      
+      <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white h-12 w-12 hover:bg-white/10 hover:text-white" onClick={navigateToNext}>
+          <ChevronRight className="h-8 w-8" />
+          <span className="sr-only">Next</span>
+      </Button>
     </div>
   );
 }

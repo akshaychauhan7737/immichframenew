@@ -9,7 +9,7 @@ import { LoaderCircle } from "lucide-react";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { getNextBucketAssets, getAssetUrl } from "@/lib/immich";
 
-const IMAGE_DURATION_S = 5;
+const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 
 type SlideshowClientProps = {
   initialBuckets: ImmichBucket[];
@@ -86,6 +86,9 @@ export default function SlideshowClient({
     if (currentAsset.isImage) {
         const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
         return () => clearTimeout(timer);
+    } else {
+        // If it's not an image (i.e., a video), advance immediately.
+        navigateToNext();
     }
   }, [currentAsset, isLoading]);
 

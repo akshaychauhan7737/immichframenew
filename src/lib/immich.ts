@@ -66,6 +66,6 @@ export function getAssetUrl(asset: ImmichAsset, type: 'thumbnail' | 'video'): st
     if (asset.thumbhash) {
         params += `&c=${encodeURIComponent(asset.thumbhash)}`;
     }
-    // Correct endpoint for assets is /assets/assetId/thumbnail
-    return `${API_BASE_PATH}/assets/${asset.id}/thumbnail${params}`;
+    // Correct endpoint for assets is /asset/{assetId}/thumbnail (singular) proxied through our API
+    return `${API_BASE_PATH}/asset/${asset.id}/thumbnail${params}`;
 }

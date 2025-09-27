@@ -57,7 +57,7 @@ export function getAssetUrl(asset: ImmichAsset, type: 'thumbnail' | 'video'): st
         return "";
     }
     
-    let params = `?size=thumbnail`;
+    let params = `?size=preview`;
     if (asset.thumbhash) {
         params += `&c=${encodeURIComponent(asset.thumbhash)}`;
     }

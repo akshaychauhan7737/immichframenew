@@ -133,15 +133,15 @@ export default function SlideshowClient({
       const nextAsset = assets[currentAssetIndex + 1];
       if (nextAsset && !nextAsset.duration) { // is image
         const img = new window.Image();
-        img.src = `${getAssetUrl(nextAsset.id, 'thumbnail')}&apiKey=${IMMICH_API_KEY}`;
+        img.src = `${getAssetUrl(nextAsset.id, 'thumbnail')}`;
       }
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   
-  const videoSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'video')}&apiKey=${IMMICH_API_KEY}` : "";
-  const imageSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'thumbnail')}&apiKey=${IMMICH_API_KEY}` : "";
+  const videoSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'video')}` : "";
+  const imageSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'thumbnail')}` : "";
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
@@ -149,8 +149,8 @@ export default function SlideshowClient({
       {currentAsset && (
         <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
           <div>
-            <h3 className="font-bold">{format(assetDate, "MMMM d, yyyy")}</h3>
-            <p className="text-sm text-white/80">{format(assetDate, "h:mm a")}</p>
+            <h3 className="font-bold text-lg">{format(assetDate, "MMMM d, yyyy")}</h3>
+            <p className="text-base text-white/80">{format(assetDate, "h:mm a")}</p>
           </div>
         </header>
       )}
@@ -200,8 +200,8 @@ export default function SlideshowClient({
       {/* Footer */}
       <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-t from-black/50 to-transparent">
         <div>
-          <h3 className="font-bold">{format(now, "MMMM d, yyyy")}</h3>
-          <p className="text-sm text-white/80">{format(now, "h:mm:ss a")}</p>
+          <h3 className="font-bold text-lg">{format(now, "MMMM d, yyyy")}</h3>
+          <p className="text-base text-white/80">{format(now, "h:mm a")}</p>
         </div>
       </footer>
     </div>

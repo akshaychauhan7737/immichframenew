@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,7 +16,11 @@ interface SlideshowState {
   assetId: string;
 }
 
-export default function SlideshowLoader() {
+interface SlideshowLoaderProps {
+    bucket?: string; // Optional starting bucket
+}
+
+export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoaderProps) {
   const [data, setData] = useState<{
     buckets: ImmichBucket[];
     assets: ImmichAsset[];
@@ -42,39 +47,51 @@ export default function SlideshowLoader() {
           throw new Error("No buckets found or failed to connect to Immich.");
         }
 
-        // 2. Check for a saved state in localStorage
-        const savedStateJSON = localStorage.getItem(STORAGE_KEY);
-        let savedState: SlideshowState | null = null;
-        if (savedStateJSON) {
-          try {
-            savedState = JSON.parse(savedStateJSON);
-          } catch (e) {
-            console.error("Failed to parse saved state, starting over.", e);
-            localStorage.removeItem(STORAGE_KEY);
-          }
-        }
-        
         let initialAssets: ImmichAsset[] = [];
         let initialBucketIndex = -1;
         let initialAssetIndex = 0;
 
-        // 3. Try to resume from saved state
-        if (savedState) {
-            const resumeBucketIndex = buckets.findIndex(b => b.timeBucket === savedState!.bucketTime);
-            if (resumeBucketIndex !== -1) {
-                const assets = await getAssetsForBucket(buckets[resumeBucketIndex].timeBucket);
+        // 2. If a specific start bucket is provided, use it
+        if (startBucket) {
+            const startBucketIndex = buckets.findIndex(b => b.timeBucket === startBucket);
+            if (startBucketIndex !== -1) {
+                const assets = await getAssetsForBucket(buckets[startBucketIndex].timeBucket);
                 if (!isCancelled && assets.length > 0) {
-                    const resumeAssetIndex = assets.findIndex(a => a.id === savedState!.assetId);
-                    if (resumeAssetIndex !== -1) {
-                        initialAssets = assets;
-                        initialBucketIndex = resumeBucketIndex;
-                        initialAssetIndex = resumeAssetIndex;
-                    }
+                    initialAssets = assets;
+                    initialBucketIndex = startBucketIndex;
+                    initialAssetIndex = 0;
                 }
             }
-             // If resuming fails for any reason, clear saved state and start fresh
-            if (initialBucketIndex === -1) {
+        } else {
+            // 3. Try to resume from saved state in localStorage
+            const savedStateJSON = localStorage.getItem(STORAGE_KEY);
+            let savedState: SlideshowState | null = null;
+            if (savedStateJSON) {
+              try {
+                savedState = JSON.parse(savedStateJSON);
+              } catch (e) {
+                console.error("Failed to parse saved state, starting over.", e);
                 localStorage.removeItem(STORAGE_KEY);
+              }
+            }
+            
+            if (savedState) {
+                const resumeBucketIndex = buckets.findIndex(b => b.timeBucket === savedState!.bucketTime);
+                if (resumeBucketIndex !== -1) {
+                    const assets = await getAssetsForBucket(buckets[resumeBucketIndex].timeBucket);
+                    if (!isCancelled && assets.length > 0) {
+                        const resumeAssetIndex = assets.findIndex(a => a.id === savedState!.assetId);
+                        if (resumeAssetIndex !== -1) {
+                            initialAssets = assets;
+                            initialBucketIndex = resumeBucketIndex;
+                            initialAssetIndex = resumeAssetIndex;
+                        }
+                    }
+                }
+                 // If resuming fails for any reason, clear saved state and start fresh
+                if (initialBucketIndex === -1) {
+                    localStorage.removeItem(STORAGE_KEY);
+                }
             }
         }
 
@@ -112,7 +129,7 @@ export default function SlideshowLoader() {
       isCancelled = true;
       clearTimeout(retryTimeout);
     };
-  }, []);
+  }, [startBucket]);
 
   if (error && !data) {
     return (

@@ -18,7 +18,8 @@ export default function SlideshowLauncher({ buckets }: { buckets: ImmichBucket[]
 
   const handleReset = () => {
     localStorage.removeItem(STORAGE_KEY);
-    router.push("/slideshow");
+    // Redirect to the slideshow which will start from the beginning
+    router.push("/");
   };
 
   const getBucketDisplayName = (timeBucket: string) => {
@@ -50,7 +51,7 @@ export default function SlideshowLauncher({ buckets }: { buckets: ImmichBucket[]
         <CardContent className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <Button asChild className="flex-1" size="lg">
-              <Link href="/slideshow">Resume Slideshow</Link>
+              <Link href="/">Resume Slideshow</Link>
             </Button>
             <Button onClick={handleReset} variant="outline" className="flex-1" size="lg">
               Clear Saved State & Restart

@@ -83,10 +83,10 @@ export default function SlideshowClient({
   useEffect(() => {
     if (isLoading || !currentAsset) return;
 
-    // Videos are disabled, only handle images
-    const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
-    
-    return () => clearTimeout(timer);
+    if (currentAsset.isImage) {
+        const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+        return () => clearTimeout(timer);
+    }
   }, [currentAsset, isLoading]);
 
   // Prefetching logic for next image
@@ -122,7 +122,7 @@ export default function SlideshowClient({
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         ) : (
           <AnimatePresence initial={false}>
-            {currentAsset && currentAsset.isImage && (
+            {currentAsset && currentAsset.isImage && imageSrc && (
                 <motion.div
                 key={currentAsset.id}
                 className="w-full h-full flex items-center justify-center"
@@ -151,8 +151,10 @@ export default function SlideshowClient({
           {/* This space is intentionally left blank */}
         </div>
         <div className="text-right">
-            <h3 className="font-bold text-5xl md:text-7xl leading-none">{format(now, "h:mm")}</h3>
-            <p className="text-2xl md:text-4xl text-white/80">{format(now, "a")}</p>
+            <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">
+              {format(now, "h:mm")}
+              <span className="text-2xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+            </h3>
         </div>
       </footer>
     </div>

@@ -12,6 +12,12 @@ import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl } from "
 const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
 
+interface SlideshowClientProps {
+    initialBuckets: ImmichBucket[];
+    initialAssets: ImmichAsset[];
+    initialBucketIndex: number;
+}
+
 export default function SlideshowClient({
   initialBuckets,
   initialAssets,
@@ -76,7 +82,7 @@ export default function SlideshowClient({
 
   // Auto-advance logic for images
   useEffect(() => {
-    if (isLoading || !currentAsset || !currentAsset.isImage) return;
+    if (isLoading || !currentAsset || currentAsset.type !== 'IMAGE') return;
     
     const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
     return () => clearTimeout(timer);
@@ -84,7 +90,7 @@ export default function SlideshowClient({
 
   // Timeout for stuck videos
   useEffect(() => {
-    if (isLoading || !currentAsset || currentAsset.isImage) return;
+    if (isLoading || !currentAsset || currentAsset.type !== 'VIDEO') return;
 
     const videoStuckTimeout = setTimeout(() => {
         console.warn(`Video stuck for ${VIDEO_TIMEOUT_S}s, advancing...`);
@@ -99,7 +105,7 @@ export default function SlideshowClient({
   useEffect(() => {
     if (currentAssetIndex < assets.length - 1) {
       const nextAsset = assets[currentAssetIndex + 1];
-      if (nextAsset && nextAsset.isImage) { 
+      if (nextAsset && nextAsset.type === 'IMAGE') { 
         const img = new window.Image();
         img.src = getImageUrl(nextAsset);
       }
@@ -134,7 +140,7 @@ export default function SlideshowClient({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 >
-                    {currentAsset.isImage ? (
+                    {currentAsset.type === 'IMAGE' ? (
                         <Image
                         src={getImageUrl(currentAsset)}
                         alt={`Asset from ${currentAsset.fileCreatedAt}`}
@@ -150,14 +156,14 @@ export default function SlideshowClient({
                             poster={getThumbnailUrl(currentAsset)}
                             autoPlay
                             playsInline
-                            controls
+                            muted
                             loop={false}
                             onEnded={navigateToNext}
                             onError={(e) => {
                                 console.error("Video playback error", e);
                                 navigateToNext();
                             }}
-                            className="h-full object-contain"
+                            className="w-full h-full object-contain"
                         />
                     )}
                 </motion.div>

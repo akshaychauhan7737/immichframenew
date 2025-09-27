@@ -6,53 +6,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { LoaderCircle, Video } from "lucide-react";
 
-import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "@/lib/types";
+import type { ImmichAsset, ImmichBucket } from "@/lib/types";
+import { getNextBucketAssets, getAssetUrl } from "@/lib/immich";
 
 const IMAGE_DURATION_S = 5;
-const IMMICH_API_URL = process.env.NEXT_PUBLIC_IMMICH_API_URL;
 const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
 
 type SlideshowClientProps = {
   initialBuckets: ImmichBucket[];
   initialAssets: ImmichAsset[];
 };
-
-async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]> {
-    if (!IMMICH_API_URL || !IMMICH_API_KEY) {
-        throw new Error("Server not configured for Immich API.");
-    }
-    const headers = {
-        "x-api-key": IMMICH_API_KEY!,
-        "Accept": "application/json",
-    };
-    try {
-        const url = `${IMMICH_API_URL}/api/timeline/bucket?timeBucket=${encodeURIComponent(
-        `${bucket}T00:00:00.000Z`
-        )}&visibility=timeline&withPartners=true&withStacked=true`;
-        
-        const response = await fetch(url, { headers, cache: "no-store" });
-        if (!response.ok) {
-        throw new Error(`Failed to fetch assets for bucket ${bucket}: ${response.statusText}`);
-        }
-        
-        const data: ImmichAssetsResponse = await response.json();
-        
-        const assets: ImmichAsset[] = data.id.map((id, index) => ({
-        id,
-        fileCreatedAt: data.fileCreatedAt[index],
-        isFavorite: data.isFavorite[index],
-        isImage: data.isImage[index],
-        duration: data.duration[index],
-        thumbhash: data.thumbhash[index],
-        livePhotoVideoId: data.livePhotoVideoId[index],
-        }));
-
-        return assets;
-    } catch (error) {
-        console.error(`Error fetching assets for bucket ${bucket}:`, error);
-        return [];
-    }
-}
 
 export default function SlideshowClient({
   initialBuckets,
@@ -73,9 +36,10 @@ export default function SlideshowClient({
   }, []);
 
   const currentAsset = useMemo(() => assets[currentAssetIndex], [assets, currentAssetIndex]);
-  const currentBucket = useMemo(() => buckets[currentBucketIndex], [buckets, currentBucketIndex]);
 
   const navigateToNext = async () => {
+    if (isLoading) return;
+
     if (currentAssetIndex < assets.length - 1) {
       setCurrentAssetIndex(prev => prev + 1);
     } else {
@@ -84,24 +48,30 @@ export default function SlideshowClient({
         nextBucketIndex = 0; // Loop back to the first bucket
       }
       
-      setCurrentBucketIndex(nextBucketIndex);
       const nextBucket = buckets[nextBucketIndex];
       
       if (nextBucket) {
         setIsLoading(true);
         try {
-          const nextAssets = await getNextBucketAssets(nextBucket.timeBucket);
-          if (nextAssets.length > 0) {
-            setAssets(nextAssets);
-            setCurrentAssetIndex(0);
-          } else {
-             // If bucket is empty, try the next one
-             navigateToNext();
+          // Keep trying buckets until we find one with assets
+          let nextAssets: ImmichAsset[] = [];
+          while (nextAssets.length === 0) {
+            nextAssets = await getNextBucketAssets(buckets[nextBucketIndex].timeBucket);
+            if (nextAssets.length > 0) {
+                setAssets(nextAssets);
+                setCurrentBucketIndex(nextBucketIndex);
+                setCurrentAssetIndex(0);
+            } else {
+                nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
+                // If we've looped through all buckets and found nothing, stop.
+                if (nextBucketIndex === currentBucketIndex) {
+                    console.error("No assets found in any bucket.");
+                    break;
+                }
+            }
           }
         } catch (error) {
           console.error("Failed to load next bucket assets", error);
-           // If there's an error, try the next one
-           navigateToNext();
         } finally {
           setIsLoading(false);
         }
@@ -123,7 +93,7 @@ export default function SlideshowClient({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [assets, currentAssetIndex, buckets, currentBucketIndex]);
+  }, [assets.length, currentAssetIndex, buckets.length, currentBucketIndex, isLoading]);
 
   const isVideo = currentAsset?.livePhotoVideoId || (currentAsset && !currentAsset.isImage);
 
@@ -137,8 +107,17 @@ export default function SlideshowClient({
       if (videoElement) {
         const handleVideoEnd = () => navigateToNext();
         videoElement.addEventListener("ended", handleVideoEnd);
-        videoElement.play().catch(console.error);
-        return () => videoElement.removeEventListener("ended", handleVideoEnd);
+        // Reset and play
+        videoElement.currentTime = 0;
+        videoElement.play().catch(err => {
+            console.error("Video play failed:", err)
+            // If play fails (e.g. browser policy), advance after standard image duration
+            timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+        });
+        return () => {
+            videoElement.removeEventListener("ended", handleVideoEnd);
+            clearTimeout(timer);
+        };
       }
     } else {
       timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
@@ -146,27 +125,18 @@ export default function SlideshowClient({
     return () => clearTimeout(timer);
   }, [currentAsset, isLoading]);
 
-  // Prefetching logic
+  // Prefetching logic for next image
   useEffect(() => {
-    const nextAsset = assets[currentAssetIndex + 1];
-    if (nextAsset?.isImage && IMMICH_API_URL) {
-      const link = document.createElement("link");
-      link.rel = "preload";
-      link.as = "image";
-      link.href = `${IMMICH_API_URL}/api/asset/${nextAsset.id}/thumbnail?size=preview`;
-      document.head.appendChild(link);
-      return () => { document.head.removeChild(link); };
+    if (currentAssetIndex < assets.length - 1) {
+      const nextAsset = assets[currentAssetIndex + 1];
+      if (nextAsset?.isImage) {
+        const img = new window.Image();
+        img.src = getAssetUrl(nextAsset.id, 'thumbnail');
+      }
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
-  
-  const getAssetUrl = (assetId: string, type: 'thumbnail' | 'video') => {
-    if (!IMMICH_API_URL || !IMMICH_API_KEY) return "";
-    const endpoint = type === 'video' ? 'video/playback' : 'thumbnail?size=preview';
-    return `${IMMICH_API_URL}/api/asset/${assetId}/${endpoint}`;
-  }
-  
   const videoSrc = currentAsset ? getAssetUrl(currentAsset.id, 'video') : "";
   const imageSrc = currentAsset ? getAssetUrl(currentAsset.id, 'thumbnail') : "";
 
@@ -184,41 +154,43 @@ export default function SlideshowClient({
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center min-h-0">
-        {(isLoading || !currentAsset) ? (
+        {(isLoading && !currentAsset) ? (
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         ) : (
           <AnimatePresence initial={false}>
-            <motion.div
-              key={currentAsset.id}
-              className="w-full h-full flex items-center justify-center"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            >
-              {isVideo ? (
-                <video
-                  ref={videoRef}
-                  key={currentAsset.id}
-                  muted
-                  playsInline
-                  className="max-h-full max-w-full object-contain"
-                  crossOrigin="anonymous"
+            {currentAsset && (
+                <motion.div
+                key={currentAsset.id}
+                className="w-full h-full flex items-center justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
                 >
-                  <source src={videoSrc} type="video/mp4" />
-                </video>
-              ) : (
-                <Image
-                  src={imageSrc}
-                  alt={`Asset from ${currentAsset.fileCreatedAt}`}
-                  fill
-                  className="object-contain"
-                  priority
-                  unoptimized // Since we are using a direct URL with API Key
-                  loader={({ src }) => `${src}&apiKey=${IMMICH_API_KEY}`}
-                />
-              )}
-            </motion.div>
+                {isVideo ? (
+                    <video
+                    ref={videoRef}
+                    key={currentAsset.id}
+                    muted
+                    playsInline
+                    className="max-h-full max-w-full object-contain"
+                    crossOrigin="anonymous"
+                    >
+                    <source src={videoSrc} type="video/mp4" />
+                    </video>
+                ) : (
+                    <Image
+                    src={imageSrc}
+                    alt={`Asset from ${currentAsset.fileCreatedAt}`}
+                    fill
+                    className="object-contain"
+                    priority
+                    unoptimized // Since we are using a direct URL with API Key
+                    loader={({ src }) => `${src}&apiKey=${IMMICH_API_KEY}`}
+                    />
+                )}
+                </motion.div>
+            )}
           </AnimatePresence>
         )}
       </div>

@@ -6,69 +6,7 @@ import { format } from "date-fns";
 
 import SlideshowClient from "@/components/slideshow-client";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-
-const IMMICH_API_URL = process.env.NEXT_PUBLIC_IMMICH_API_URL;
-const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
-
-async function getBuckets(): Promise<ImmichBucket[]> {
-    if (!IMMICH_API_URL || !IMMICH_API_KEY) {
-      throw new Error("Server not configured for Immich API.");
-    }
-    const headers = {
-      "x-api-key": IMMICH_API_KEY!,
-      "Accept": "application/json",
-    };
-    try {
-      const response = await fetch(
-        `${IMMICH_API_URL}/api/timeline/buckets?visibility=timeline&withPartners=true&withStacked=true`,
-        { headers, cache: "no-store" }
-      );
-      if (!response.ok) {
-        throw new Error(`Failed to fetch buckets: ${response.statusText}`);
-      }
-      return response.json();
-    } catch (error) {
-      console.error("Error fetching Immich buckets:", error);
-      return [];
-    }
-}
-
-async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
-    if (!IMMICH_API_URL || !IMMICH_API_KEY) {
-      throw new Error("Server not configured for Immich API.");
-    }
-    const headers = {
-        "x-api-key": IMMICH_API_KEY!,
-        "Accept": "application/json",
-    };
-    try {
-      const url = `${IMMICH_API_URL}/api/timeline/bucket?timeBucket=${encodeURIComponent(
-        `${bucket}T00:00:00.000Z`
-      )}&visibility=timeline&withPartners=true&withStacked=true`;
-      
-      const response = await fetch(url, { headers, cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch assets for bucket ${bucket}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      const assets: ImmichAsset[] = data.id.map((id: string, index: number) => ({
-        id,
-        fileCreatedAt: data.fileCreatedAt[index],
-        isFavorite: data.isFavorite[index],
-        isImage: data.isImage[index],
-        duration: data.duration[index],
-        thumbhash: data.thumbhash[index],
-        livePhotoVideoId: data.livePhotoVideoId[index],
-      }));
-  
-      return assets;
-    } catch (error) {
-      console.error(`Error fetching assets for bucket ${bucket}:`, error);
-      return [];
-    }
-}
+import { getBuckets, getAssetsForBucket } from "@/lib/immich";
 
 
 export default function SlideshowLoader() {
@@ -90,27 +28,31 @@ export default function SlideshowLoader() {
 
     const fetchData = async () => {
       try {
-        if (!IMMICH_API_URL || !IMMICH_API_KEY) {
-          throw new Error("Immich API URL or Key is not configured in environment variables.");
-        }
-        
         const buckets = await getBuckets();
         if (isCancelled) return;
 
         if (!buckets || buckets.length === 0) {
-          throw new Error("No buckets found or failed to connect.");
+          throw new Error("No buckets found or failed to connect to Immich.");
         }
         
-        const firstBucket = buckets[0];
-        const assets = await getAssetsForBucket(firstBucket.timeBucket);
-
-        if (isCancelled) return;
-
-        if (assets.length === 0) {
-            throw new Error("No assets found in the first bucket.");
+        // Find the first non-empty bucket
+        let firstAssets: ImmichAsset[] = [];
+        let firstBucketIndex = 0;
+        for (let i = 0; i < buckets.length; i++) {
+            const assets = await getAssetsForBucket(buckets[i].timeBucket);
+            if (isCancelled) return;
+            if (assets.length > 0) {
+                firstAssets = assets;
+                firstBucketIndex = i;
+                break;
+            }
+        }
+        
+        if (firstAssets.length === 0) {
+            throw new Error("No assets found in any available buckets.");
         }
 
-        setData({ buckets, assets });
+        setData({ buckets, assets: firstAssets });
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;
@@ -136,10 +78,13 @@ export default function SlideshowLoader() {
                 <LoaderCircle className="w-12 h-12 text-white/50 animate-spin mb-4" />
                 <h2 className="text-2xl font-semibold">Connecting to Immich...</h2>
                 <p className="mt-2 text-muted-foreground">
-                    Could not connect to Immich. Retrying...
+                    Could not connect or find any photos. Retrying...
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Please check your environment variables and ensure your Immich server is running.
+                <p className="mt-1 text-sm text-red-400">
+                    Error: {error}
+                </p>
+                <p className="mt-4 text-sm text-muted-foreground">
+                    Please check your environment variables and ensure your Immich server is running and contains photos.
                 </p>
             </div>
         </div>

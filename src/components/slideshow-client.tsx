@@ -212,7 +212,9 @@ export default function SlideshowClient({
       {/* Footer */}
       <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
         <div>
-          {/* This space is intentionally left blank */}
+          <h3 className="font-bold text-lg md:text-xl text-white/90">
+            {format(now, "EEEE, MMMM d")}
+          </h3>
         </div>
         <div className="text-right">
             <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">

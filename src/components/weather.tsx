@@ -55,8 +55,8 @@ export default function Weather() {
 
   return (
     <div className="text-base md:text-lg text-white/80 mt-1 capitalize flex items-center gap-4">
-       <span>{weather.temp}°C, {weather.description}</span>
-       <span className={aqiInfo.color}>AQI: {aqiInfo.text}</span>
+       <span><span className="font-bold">{weather.temp}°C</span>, {weather.description}</span>
+       <span className={aqiInfo.color}><span className="font-bold">AQI: {weather.aqi} ({aqiInfo.text})</span></span>
     </div>
   );
 }

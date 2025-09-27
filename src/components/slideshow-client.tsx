@@ -148,8 +148,8 @@ export default function SlideshowClient({
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
-        {currentAsset ? (
+      <header className="absolute top-0 left-0 right-0 z-10 p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
+        {currentAsset && (
           <div>
             <h3 className="font-bold text-lg md:text-xl text-white/90">{format(assetDate, "MMMM d, yyyy")}</h3>
             {locationString && (
@@ -159,7 +159,7 @@ export default function SlideshowClient({
                 </div>
             )}
           </div>
-        ) : <div />}
+        )}
       </header>
 
       {/* Main Content */}

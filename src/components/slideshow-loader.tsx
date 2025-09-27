@@ -76,8 +76,8 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
 
     const fetchData = async () => {
       try {
-        // Read duration from env. This runs on the server, so it's safe.
-        const duration = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
+        const durationEnv = process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S;
+        const duration = durationEnv ? parseInt(durationEnv, 10) : 12;
         
         // 1. Get all available buckets
         const buckets = await getBuckets();

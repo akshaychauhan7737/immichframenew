@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -128,11 +128,11 @@ export default function SlideshowClient({
     }
   }, [currentAsset]);
 
-  const navigateToNext = async () => {
+  const navigateToNext = useCallback(async () => {
     if (isLoading) return;
-
+  
     setDetailedAsset(null); // Clear details for next asset
-
+  
     if (currentAssetIndex < assets.length - 1) {
       setCurrentAssetIndex(prev => prev + 1);
     } else {
@@ -140,33 +140,32 @@ export default function SlideshowClient({
       if (nextBucketIndex >= buckets.length) {
         nextBucketIndex = 0; // Loop back to the first bucket
       }
-      
+  
       const nextBucket = buckets[nextBucketIndex];
-      
+  
       if (nextBucket) {
         setIsLoading(true);
         try {
           let nextAssets: ImmichAsset[] = [];
-          // Loop through buckets until we find one with assets
           let attempts = 0;
           while (nextAssets.length === 0 && attempts < buckets.length) {
             const bucketToTry = buckets[nextBucketIndex];
             if (bucketToTry) {
-                nextAssets = await getNextBucketAssets(bucketToTry.timeBucket);
-                if (nextAssets.length > 0) {
-                    setAssets(nextAssets);
-                    setCurrentBucketIndex(nextBucketIndex);
-                    setCurrentAssetIndex(0);
-                } else {
-                    nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
-                }
+              nextAssets = await getNextBucketAssets(bucketToTry.timeBucket);
+              if (nextAssets.length > 0) {
+                setAssets(nextAssets);
+                setCurrentBucketIndex(nextBucketIndex);
+                setCurrentAssetIndex(0);
+              } else {
+                nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
+              }
             } else {
-                 nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
+              nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
             }
             attempts++;
           }
           if (attempts >= buckets.length) {
-             console.error("No assets found in any bucket after full loop.");
+            console.error("No assets found in any bucket after full loop.");
           }
         } catch (error) {
           console.error("Failed to load next bucket assets", error);
@@ -175,7 +174,7 @@ export default function SlideshowClient({
         }
       }
     }
-  };
+  }, [isLoading, currentAssetIndex, assets.length, currentBucketIndex, buckets]);
 
   // Auto-advance logic for images
   useEffect(() => {

@@ -6,6 +6,10 @@ services:
     ports:
       - "9002:3000"
     environment:
+      # --- App URL (Required for Server-Side Rendering) ---
+      # This should be the URL that the app is accessible from on your network
+      - NEXT_PUBLIC_APP_URL=http://localhost:9002
+
       # --- Immich Server Configuration ---
       # Replace with your Immich server's local network URL
       - NEXT_PUBLIC_IMMICH_API_URL=http://192.168.29.3:2283

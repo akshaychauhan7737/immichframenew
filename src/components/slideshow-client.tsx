@@ -8,12 +8,57 @@ import { format } from "date-fns";
 import { LoaderCircle, MapPin } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl, getAssetById } from "@/lib/immich";
 import Weather from "./weather";
 
 const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
 const STORAGE_KEY = "slideshow_state";
+
+// Helper functions to fetch data from the API routes
+async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]> {
+    const res = await fetch(`/api/immich/timeline/bucket?timeBucket=${encodeURIComponent(bucket)}`);
+    if (!res.ok) throw new Error("Failed to get next bucket assets");
+    const data = await res.json();
+    // Handle columnar vs object array format
+    if (data && Array.isArray(data.id) && !data.items) {
+        const assets: ImmichAsset[] = [];
+        const count = data.id.length;
+        for (let i = 0; i < count; i++) {
+            assets.push({
+                id: data.id[i],
+                fileCreatedAt: data.fileCreatedAt[i],
+                isFavorite: data.isFavorite[i],
+                type: data.isImage[i] ? 'IMAGE' : 'VIDEO',
+                duration: data.duration[i],
+                thumbhash: data.thumbhash[i],
+                livePhotoVideoId: data.livePhotoVideoId[i],
+            });
+        }
+        return assets;
+    }
+    return data?.items || [];
+}
+
+async function getAssetById(assetId: string): Promise<ImmichAsset | null> {
+    try {
+        const res = await fetch(`/api/immich/assets/${assetId}`);
+        if (!res.ok) throw new Error(`Failed to get asset ${assetId}`);
+        const asset = await res.json();
+        return {
+            ...asset,
+            type: asset.type === 'VIDEO' ? 'VIDEO' : 'IMAGE'
+        };
+    } catch (error) {
+        console.error("Error in getAssetById:", error);
+        return null;
+    }
+}
+
+// Helper functions to construct media URLs using the proxy
+const getImageUrl = (asset: ImmichAsset) => `/api/image-proxy/${asset.id}?size=preview`;
+const getThumbnailUrl = (asset: ImmichAsset) => `/api/image-proxy/${asset.id}?size=preview${asset.thumbhash ? `&thumbhash=${encodeURIComponent(asset.thumbhash)}` : ''}`;
+const getVideoUrl = (asset: ImmichAsset) => `/api/video-proxy/${asset.id}`;
+
 
 interface SlideshowClientProps {
     initialBuckets: ImmichBucket[];
@@ -72,7 +117,7 @@ export default function SlideshowClient({
         } catch (error) {
           console.error("Failed to fetch asset details", error);
           if (!isCancelled) {
-            // Fallback to basic asset info
+            // Fallback to basic asset info if detailed fetch fails
             setDetailedAsset(currentAsset);
           }
         }

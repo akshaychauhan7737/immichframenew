@@ -6,7 +6,6 @@ import { format } from "date-fns";
 
 import SlideshowClient from "@/components/slideshow-client";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { getBuckets, getAssetsForBucket } from "@/lib/immich";
 import Weather from "./weather";
 
 const STORAGE_KEY = "slideshow_state";
@@ -14,6 +13,39 @@ const STORAGE_KEY = "slideshow_state";
 interface SlideshowState {
   bucketTime: string;
   assetId: string;
+}
+
+// Helper functions to fetch data from API routes
+async function getBuckets(): Promise<ImmichBucket[]> {
+  const res = await fetch('/api/immich/timeline/buckets?visibility=timeline&withPartners=true&withStacked=true');
+  if (!res.ok) throw new Error("Failed to fetch buckets");
+  return res.json();
+}
+
+async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
+    const res = await fetch(`/api/immich/timeline/bucket?timeBucket=${encodeURIComponent(bucket)}`);
+    if (!res.ok) throw new Error("Failed to get assets for bucket");
+    const data = await res.json();
+
+    // Handle columnar format from some Immich versions
+    if (data && Array.isArray(data.id) && !data.items) {
+        const assets: ImmichAsset[] = [];
+        const count = data.id.length;
+        for (let i = 0; i < count; i++) {
+            assets.push({
+                id: data.id[i],
+                fileCreatedAt: data.fileCreatedAt[i],
+                isFavorite: data.isFavorite[i],
+                type: data.isImage[i] ? 'IMAGE' : 'VIDEO',
+                duration: data.duration[i],
+                thumbhash: data.thumbhash[i],
+                livePhotoVideoId: data.livePhotoVideoId[i],
+            });
+        }
+        return assets;
+    }
+    // Handle object array format
+    return data?.items || [];
 }
 
 interface SlideshowLoaderProps {

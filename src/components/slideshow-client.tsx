@@ -10,7 +10,6 @@ import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { getNextBucketAssets, getAssetUrl } from "@/lib/immich";
 
 const IMAGE_DURATION_S = 5;
-const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
 
 type SlideshowClientProps = {
   initialBuckets: ImmichBucket[];
@@ -97,33 +96,17 @@ export default function SlideshowClient({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [assets.length, currentAssetIndex, buckets.length, currentBucketIndex, isLoading]);
 
-  const isVideo = currentAsset?.duration && currentAsset.duration !== '0:00:00.000000';
+  const isVideo = false; // Videos disabled as requested
 
   // Auto-advance logic
   useEffect(() => {
     if (isLoading || !currentAsset) return;
 
     let timer: NodeJS.Timeout;
-    if (isVideo) {
-      const videoElement = videoRef.current;
-      if (videoElement) {
-        const handleVideoEnd = () => navigateToNext();
-        videoElement.addEventListener("ended", handleVideoEnd);
-        // Reset and play
-        videoElement.currentTime = 0;
-        videoElement.play().catch(err => {
-            console.error("Video play failed:", err)
-            // If play fails (e.g. browser policy), advance after standard image duration
-            timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
-        });
-        return () => {
-            videoElement.removeEventListener("ended", handleVideoEnd);
-            clearTimeout(timer);
-        };
-      }
-    } else {
-      timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
-    }
+    
+    // Only handle images for now
+    timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+    
     return () => clearTimeout(timer);
   }, [currentAsset, isLoading]);
 
@@ -131,17 +114,17 @@ export default function SlideshowClient({
   useEffect(() => {
     if (currentAssetIndex < assets.length - 1) {
       const nextAsset = assets[currentAssetIndex + 1];
-      if (nextAsset && !nextAsset.duration) { // is image
+      // Only prefetch images
+      if (nextAsset && !nextAsset.duration) { 
         const img = new window.Image();
-        img.src = `${getAssetUrl(nextAsset.id, 'thumbnail')}`;
+        img.src = getAssetUrl(nextAsset.id, 'thumbnail');
       }
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   
-  const videoSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'video')}` : "";
-  const imageSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'thumbnail')}` : "";
+  const imageSrc = currentAsset ? getAssetUrl(currentAsset.id, 'thumbnail') : "";
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
@@ -161,7 +144,7 @@ export default function SlideshowClient({
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         ) : (
           <AnimatePresence initial={false}>
-            {currentAsset && (
+            {currentAsset && !isVideo && (
                 <motion.div
                 key={currentAsset.id}
                 className="w-full h-full flex items-center justify-center"
@@ -170,27 +153,14 @@ export default function SlideshowClient({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 >
-                {isVideo ? (
-                    <video
-                    ref={videoRef}
-                    key={currentAsset.id}
-                    muted
-                    playsInline
-                    className="max-h-full max-w-full object-contain"
-                    crossOrigin="anonymous"
-                    >
-                    <source src={videoSrc} type="video/mp4" />
-                    </video>
-                ) : (
                     <Image
                     src={imageSrc}
                     alt={`Asset from ${currentAsset.fileCreatedAt}`}
                     fill
                     className="object-contain"
                     priority
-                    unoptimized // Since we are using a direct URL with API Key
+                    unoptimized // Since we are using a direct URL with API Key via proxy
                     />
-                )}
                 </motion.div>
             )}
           </AnimatePresence>
@@ -200,8 +170,11 @@ export default function SlideshowClient({
       {/* Footer */}
       <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-t from-black/50 to-transparent">
         <div>
-          <h3 className="font-bold text-lg">{format(now, "MMMM d, yyyy")}</h3>
-          <p className="text-base text-white/80">{format(now, "h:mm a")}</p>
+          {/* This space is intentionally left blank */}
+        </div>
+        <div className="text-right">
+            <h3 className="font-bold text-2xl">{format(now, "h:mm")}</h3>
+            <p className="text-xl text-white/80">{format(now, "a")}</p>
         </div>
       </footer>
     </div>

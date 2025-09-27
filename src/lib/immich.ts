@@ -3,7 +3,7 @@ import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "./types";
 const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
 
 // The API URL is now relative to our own server, which will proxy to the real Immich API
-const API_BASE_PATH = "/api/immich/api";
+const API_BASE_PATH = "/api/immich";
 
 async function immichFetch(path: string) {
     if (!IMMICH_API_KEY) {
@@ -57,8 +57,12 @@ export async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]
 }
 
 export function getAssetUrl(assetId: string, type: 'thumbnail' | 'video'): string {
-    const endpoint = type === 'video' ? 'playback' : 'thumbnail';
-    const params = type === 'thumbnail' ? '?size=preview' : '';
-    // The asset URLs are constructed to go through the proxy as well
-    return `${API_BASE_PATH}/asset/${assetId}${params}`;
+    if (type === 'video') {
+        const endpoint = 'playback';
+        return `${API_BASE_PATH}/asset/${endpoint}/${assetId}`;
+    }
+    
+    // Use the direct asset thumbnail endpoint for images as requested
+    const params = `?size=preview`;
+    return `${API_BASE_PATH}/asset/thumbnail/${assetId}${params}`;
 }

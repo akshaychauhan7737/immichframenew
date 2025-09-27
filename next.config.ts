@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '100mb',
+      timeout: 120,
     },
   },
   eslint: {
@@ -17,7 +18,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/immich/:path*',
-        destination: `${process.env.NEXT_PUBLIC_IMMICH_API_URL}/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_IMMICH_API_URL}/api/:path*`,
       },
     ]
   },

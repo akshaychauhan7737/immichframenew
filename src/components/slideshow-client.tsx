@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { LoaderCircle, MapPin } from "lucide-react";
@@ -173,7 +174,7 @@ export default function SlideshowClient({
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-10 p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
         {currentAsset && (
-          <div>
+          <Link href="/" className="cursor-pointer">
             <h3 className="font-bold text-lg md:text-xl text-white/90">{format(assetDate, "MMMM d, yyyy")}</h3>
             {locationString && (
                  <div className="flex items-center gap-2 text-base md:text-lg text-white/80 mt-1">
@@ -181,7 +182,7 @@ export default function SlideshowClient({
                     <span>{locationString}</span>
                 </div>
             )}
-          </div>
+          </Link>
         )}
       </header>
 

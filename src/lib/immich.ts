@@ -20,7 +20,7 @@ export async function getBuckets(): Promise<ImmichBucket[]> {
   try {
     const response = await fetch(
       `${IMMICH_API_URL}/api/timeline/buckets?visibility=timeline&withPartners=true&withStacked=true`,
-      { headers, next: { revalidate: 3600 } } // Cache for 1 hour
+      { headers, cache: "no-store" }
     );
     if (!response.ok) {
       throw new Error(`Failed to fetch buckets: ${response.statusText}`);
@@ -41,7 +41,7 @@ export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]>
       `${bucket}T00:00:00.000Z`
     )}&visibility=timeline&withPartners=true&withStacked=true`;
     
-    const response = await fetch(url, { headers, next: { revalidate: 3600 } });
+    const response = await fetch(url, { headers, cache: "no-store" });
     if (!response.ok) {
       throw new Error(`Failed to fetch assets for bucket ${bucket}: ${response.statusText}`);
     }

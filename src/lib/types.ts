@@ -8,7 +8,7 @@ export interface ImmichAsset {
   fileCreatedAt: string;
   isFavorite: boolean;
   isImage: boolean;
-  duration: string | null;
+  duration: string; // Videos always have a duration
   thumbhash: string | null;
   livePhotoVideoId: string | null;
 }
@@ -18,7 +18,7 @@ export interface ImmichAssetsResponse {
   id: string[];
   isFavorite: boolean[];
   isImage: boolean[];
-  duration: (string | null)[];
+  duration: string[];
   thumbhash: (string | null)[];
   fileCreatedAt: string[];
   livePhotoVideoId: (string | null)[];

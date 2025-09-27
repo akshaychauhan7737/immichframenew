@@ -45,20 +45,37 @@ export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]>
       livePhotoVideoId: data.livePhotoVideoId[index],
     }));
 
-    // Filter out videos for now
-    return assets.filter(asset => asset.isImage);
+    // No longer filtering out videos
+    return assets;
 }
 
 export async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]> {
     return getAssetsForBucket(bucket);
 }
 
-export function getAssetUrl(asset: ImmichAsset): string {
+export function getImageUrl(asset: ImmichAsset): string {
+    if (!asset.isImage) return "";
     let params = `?size=preview`;
     if (asset.thumbhash) {
-        // The thumbhash needs to be URI encoded as it contains special characters
         params += `&thumbhash=${encodeURIComponent(asset.thumbhash)}`;
     }
-    // Use the new proxy route for images
+    return `/api/image-proxy/${asset.id}${params}`;
+}
+
+export function getVideoUrl(asset: ImmichAsset): string {
+    if (asset.isImage) return "";
+    let params = ``;
+    if (asset.thumbhash) {
+        params = `?c=${encodeURIComponent(asset.thumbhash)}`;
+    }
+    // Use the new proxy route for videos
+    return `/api/video-proxy/${asset.id}${params}`;
+}
+
+export function getThumbnailUrl(asset: ImmichAsset): string {
+    let params = `?size=preview`;
+    if (asset.thumbhash) {
+        params += `&thumbhash=${encodeURIComponent(asset.thumbhash)}`;
+    }
     return `/api/image-proxy/${asset.id}${params}`;
 }

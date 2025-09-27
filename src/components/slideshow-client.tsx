@@ -7,15 +7,10 @@ import { format } from "date-fns";
 import { LoaderCircle } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { getNextBucketAssets, getAssetUrl } from "@/lib/immich";
+import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl } from "@/lib/immich";
 
 const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
-
-type SlideshowClientProps = {
-  initialBuckets: ImmichBucket[];
-  initialAssets: ImmichAsset[];
-  initialBucketIndex: number;
-};
+const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
 
 export default function SlideshowClient({
   initialBuckets,
@@ -28,6 +23,8 @@ export default function SlideshowClient({
   const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [now, setNow] = useState(new Date());
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Clock effect
   useEffect(() => {
@@ -53,7 +50,6 @@ export default function SlideshowClient({
       if (nextBucket) {
         setIsLoading(true);
         try {
-          // Keep trying buckets until we find one with assets
           let nextAssets: ImmichAsset[] = [];
           while (nextAssets.length === 0) {
             nextAssets = await getNextBucketAssets(buckets[nextBucketIndex].timeBucket);
@@ -63,7 +59,6 @@ export default function SlideshowClient({
                 setCurrentAssetIndex(0);
             } else {
                 nextBucketIndex = (nextBucketIndex + 1) % buckets.length;
-                // If we've looped through all buckets and found nothing, stop.
                 if (nextBucketIndex === currentBucketIndex) {
                     console.error("No assets found in any bucket.");
                     break;
@@ -79,18 +74,26 @@ export default function SlideshowClient({
     }
   };
 
-  // Auto-advance logic
+  // Auto-advance logic for images
   useEffect(() => {
-    if (isLoading || !currentAsset) return;
-
-    if (currentAsset.isImage) {
-        const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
-        return () => clearTimeout(timer);
-    } else {
-        // If it's not an image (i.e., a video), advance immediately.
-        navigateToNext();
-    }
+    if (isLoading || !currentAsset || !currentAsset.isImage) return;
+    
+    const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+    return () => clearTimeout(timer);
   }, [currentAsset, isLoading]);
+
+  // Timeout for stuck videos
+  useEffect(() => {
+    if (isLoading || !currentAsset || currentAsset.isImage) return;
+
+    const videoStuckTimeout = setTimeout(() => {
+        console.warn(`Video stuck for ${VIDEO_TIMEOUT_S}s, advancing...`);
+        navigateToNext();
+    }, VIDEO_TIMEOUT_S * 1000);
+
+    return () => clearTimeout(videoStuckTimeout);
+  }, [currentAsset, isLoading]);
+
 
   // Prefetching logic for next image
   useEffect(() => {
@@ -98,23 +101,20 @@ export default function SlideshowClient({
       const nextAsset = assets[currentAssetIndex + 1];
       if (nextAsset && nextAsset.isImage) { 
         const img = new window.Image();
-        img.src = getAssetUrl(nextAsset);
+        img.src = getImageUrl(nextAsset);
       }
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   
-  const imageSrc = currentAsset && currentAsset.isImage ? getAssetUrl(currentAsset) : "";
-
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
         {currentAsset ? (
           <div>
-            <h3 className="font-bold text-xl md:text-2xl">{format(assetDate, "MMMM d, yyyy")}</h3>
-            <p className="text-lg md:text-xl text-white/80">{format(assetDate, "h:mm a")}</p>
+            <h3 className="font-bold text-lg md:text-xl text-white/90">{format(assetDate, "MMMM d, yyyy")}</h3>
           </div>
         ) : <div />}
       </header>
@@ -125,7 +125,7 @@ export default function SlideshowClient({
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         ) : (
           <AnimatePresence initial={false}>
-            {currentAsset && currentAsset.isImage && imageSrc && (
+            {currentAsset && (
                 <motion.div
                 key={currentAsset.id}
                 className="w-full h-full flex items-center justify-center"
@@ -134,14 +134,32 @@ export default function SlideshowClient({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 >
-                    <Image
-                    src={imageSrc}
-                    alt={`Asset from ${currentAsset.fileCreatedAt}`}
-                    fill
-                    className="object-contain"
-                    priority
-                    unoptimized // Using proxy, no need for Next.js optimization
-                    />
+                    {currentAsset.isImage ? (
+                        <Image
+                        src={getImageUrl(currentAsset)}
+                        alt={`Asset from ${currentAsset.fileCreatedAt}`}
+                        fill
+                        className="object-contain"
+                        priority
+                        unoptimized
+                        />
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            src={getVideoUrl(currentAsset)}
+                            poster={getThumbnailUrl(currentAsset)}
+                            autoPlay
+                            playsInline
+                            controls
+                            loop={false}
+                            onEnded={navigateToNext}
+                            onError={(e) => {
+                                console.error("Video playback error", e);
+                                navigateToNext();
+                            }}
+                            className="h-full object-contain"
+                        />
+                    )}
                 </motion.div>
             )}
           </AnimatePresence>

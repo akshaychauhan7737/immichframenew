@@ -1,19 +1,29 @@
 import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "./types";
 
+const IMMICH_API_URL = process.env.NEXT_PUBLIC_IMMICH_API_URL;
 const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
-const API_BASE_PATH = "/api/immich";
+
+// Helper to check if we are on the server
+const isServer = typeof window === 'undefined';
 
 async function immichFetch(path: string, options: RequestInit = {}) {
-    if (!IMMICH_API_KEY) {
-        throw new Error("Immich API Key is not configured in environment variables.");
+    if (!IMMICH_API_KEY || !IMMICH_API_URL) {
+        throw new Error("Immich API URL or Key is not configured in environment variables.");
     }
+
+    // If on the server, fetch directly from the Immich instance.
+    // If on the client, use the Next.js API proxy to hide the key.
+    const baseUrl = isServer ? `${IMMICH_API_URL}/api` : "/api/immich";
+    const url = `${baseUrl}${path}`;
+
     const headers = {
-        "x-api-key": IMMICH_API_KEY!,
         "Accept": "application/json",
+        // The API key is only sent for direct server-to-server requests.
+        // The browser client relies on the proxy, which adds the key.
+        ...(isServer && { "x-api-key": IMMICH_API_KEY }),
         ...options.headers,
     };
-    const url = `${API_BASE_PATH}${path}`;
-
+    
     const response = await fetch(url, { ...options, headers, cache: "no-store" });
 
     if (!response.ok) {
@@ -51,7 +61,7 @@ export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]>
 
     // Handle standard AoS format
     const responseData = data as ImmichAssetsResponse;
-    if (!responseData || !responseData.items) {
+    if (!responseData || !Array.isArray(responseData.items)) {
         return [];
     }
     return responseData.items.map(item => ({

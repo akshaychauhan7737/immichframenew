@@ -18,7 +18,7 @@ services:
 
       # --- Slideshow Settings (Optional) ---
       # The duration (in seconds) each image is displayed. Defaults to 5.
-      - NEXT_PUBLIC_SLIDESHOW_DURATION_S=5
+      - NEXT_PUBLIC_SLIDESHOW_DURATION_S=15
 
       # --- OpenWeatherMap API Settings ---
       - OPENWEATHER_API_KEY=694636f0bd371181225ff30313f478b2

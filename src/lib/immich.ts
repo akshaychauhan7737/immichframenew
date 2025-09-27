@@ -56,13 +56,16 @@ export async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]
     return getAssetsForBucket(bucket);
 }
 
-export function getAssetUrl(assetId: string, type: 'thumbnail' | 'video'): string {
+export function getAssetUrl(asset: ImmichAsset, type: 'thumbnail' | 'video'): string {
     if (type === 'video') {
         const endpoint = 'playback';
-        return `${API_BASE_PATH}/asset/${endpoint}/${assetId}`;
+        return `${API_BASE_PATH}/asset/${endpoint}/${asset.id}`;
     }
     
-    // Use the direct asset thumbnail endpoint for images as requested
-    const params = `?size=preview`;
-    return `${API_BASE_PATH}/asset/thumbnail/${assetId}${params}`;
+    let params = `?size=preview`;
+    if (asset.thumbhash) {
+        params += `&c=${encodeURIComponent(asset.thumbhash)}`;
+    }
+    // Correct endpoint for assets is /asset/assetId/thumbnail
+    return `${API_BASE_PATH}/asset/${asset.id}/thumbnail${params}`;
 }

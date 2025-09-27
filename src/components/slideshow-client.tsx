@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
-import { LoaderCircle, Video } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { getNextBucketAssets, getAssetUrl } from "@/lib/immich";
@@ -22,12 +22,11 @@ export default function SlideshowClient({
   initialAssets,
   initialBucketIndex,
 }: SlideshowClientProps) {
-  const [buckets, setBuckets] = useState<ImmichBucket[]>(initialBuckets);
+  const [buckets] = useState<ImmichBucket[]>(initialBuckets);
   const [currentBucketIndex, setCurrentBucketIndex] = useState(initialBucketIndex);
   const [assets, setAssets] = useState<ImmichAsset[]>(initialAssets);
   const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [now, setNow] = useState(new Date());
 
   // Clock effect
@@ -80,32 +79,12 @@ export default function SlideshowClient({
     }
   };
 
-  const navigateToPrev = () => {
-    if (currentAssetIndex > 0) {
-      setCurrentAssetIndex(prev => prev - 1);
-    }
-  };
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") navigateToNext();
-      else if (e.key === "ArrowLeft") navigateToPrev();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [assets.length, currentAssetIndex, buckets.length, currentBucketIndex, isLoading]);
-
-  const isVideo = false; // Videos disabled as requested
-
   // Auto-advance logic
   useEffect(() => {
     if (isLoading || !currentAsset) return;
 
-    let timer: NodeJS.Timeout;
-    
-    // Only handle images for now
-    timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+    // Videos are disabled, only handle images
+    const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
     
     return () => clearTimeout(timer);
   }, [currentAsset, isLoading]);
@@ -114,29 +93,28 @@ export default function SlideshowClient({
   useEffect(() => {
     if (currentAssetIndex < assets.length - 1) {
       const nextAsset = assets[currentAssetIndex + 1];
-      // Only prefetch images
-      if (nextAsset && !nextAsset.duration) { 
+      if (nextAsset && nextAsset.isImage) { 
         const img = new window.Image();
-        img.src = getAssetUrl(nextAsset.id, 'thumbnail');
+        img.src = getAssetUrl(nextAsset, 'thumbnail');
       }
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   
-  const imageSrc = currentAsset ? getAssetUrl(currentAsset.id, 'thumbnail') : "";
+  const imageSrc = currentAsset ? getAssetUrl(currentAsset, 'thumbnail') : "";
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
       {/* Header */}
-      {currentAsset && (
-        <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
+      <header className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
+        {currentAsset ? (
           <div>
             <h3 className="font-bold text-xl md:text-2xl">{format(assetDate, "MMMM d, yyyy")}</h3>
             <p className="text-lg md:text-xl text-white/80">{format(assetDate, "h:mm a")}</p>
           </div>
-        </header>
-      )}
+        ) : <div />}
+      </header>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center min-h-0">
@@ -144,7 +122,7 @@ export default function SlideshowClient({
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         ) : (
           <AnimatePresence initial={false}>
-            {currentAsset && !isVideo && (
+            {currentAsset && currentAsset.isImage && (
                 <motion.div
                 key={currentAsset.id}
                 className="w-full h-full flex items-center justify-center"
@@ -159,7 +137,7 @@ export default function SlideshowClient({
                     fill
                     className="object-contain"
                     priority
-                    unoptimized // Since we are using a direct URL with API Key via proxy
+                    unoptimized // Using proxy, no need for Next.js optimization
                     />
                 </motion.div>
             )}

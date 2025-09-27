@@ -1,7 +1,9 @@
 import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "./types";
 
 async function immichProxyFetch(path: string, options: RequestInit = {}) {
-    const url = `/api/immich${path}`;
+    const isServer = typeof window === 'undefined';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+    const url = isServer ? `${appUrl}/api/immich${path}` : `/api/immich${path}`;
 
     const response = await fetch(url, { ...options, cache: "no-store" });
 

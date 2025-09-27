@@ -57,8 +57,8 @@ export async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]
 }
 
 export function getAssetUrl(assetId: string, type: 'thumbnail' | 'video'): string {
-    const endpoint = type === 'video' ? 'video/playback' : 'asset/thumbnail';
-    const size = type === 'thumbnail' ? '?size=preview' : '';
+    const endpoint = type === 'video' ? 'playback' : 'thumbnail';
+    const params = type === 'thumbnail' ? '?size=preview' : '';
     // The asset URLs are constructed to go through the proxy as well
-    return `${API_BASE_PATH}/asset/${assetId}/${endpoint}${size}`;
+    return `${API_BASE_PATH}/asset/${assetId}${params}`;
 }

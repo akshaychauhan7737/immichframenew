@@ -133,7 +133,7 @@ export default function SlideshowClient({
       const nextAsset = assets[currentAssetIndex + 1];
       if (nextAsset && !nextAsset.duration) { // is image
         const img = new window.Image();
-        img.src = getAssetUrl(nextAsset.id, 'thumbnail');
+        img.src = `${getAssetUrl(nextAsset.id, 'thumbnail')}&apiKey=${IMMICH_API_KEY}`;
       }
     }
   }, [assets, currentAssetIndex]);
@@ -141,7 +141,7 @@ export default function SlideshowClient({
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   
   const videoSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'video')}&apiKey=${IMMICH_API_KEY}` : "";
-  const imageSrc = currentAsset ? getAssetUrl(currentAsset.id, 'thumbnail') : "";
+  const imageSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'thumbnail')}&apiKey=${IMMICH_API_KEY}` : "";
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
@@ -189,7 +189,6 @@ export default function SlideshowClient({
                     className="object-contain"
                     priority
                     unoptimized // Since we are using a direct URL with API Key
-                    loader={({ src }) => `${src}&apiKey=${IMMICH_API_KEY}`}
                     />
                 )}
                 </motion.div>

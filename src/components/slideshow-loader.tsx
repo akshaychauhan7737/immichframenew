@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +7,7 @@ import { format } from "date-fns";
 import SlideshowClient from "@/components/slideshow-client";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { getBuckets, getAssetsForBucket } from "@/lib/immich";
+import Weather from "./weather";
 
 const STORAGE_KEY = "slideshow_state";
 
@@ -156,6 +156,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
               <h3 className="font-bold text-lg md:text-xl text-white/90">
                 {format(now, "EEEE, MMMM d")}
               </h3>
+              <Weather />
             </div>
             <div className="text-right">
                 <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">
@@ -179,6 +180,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
               <h3 className="font-bold text-lg md:text-xl text-white/90">
                 {format(now, "EEEE, MMMM d")}
               </h3>
+              <Weather />
             </div>
             <div className="text-right">
                 <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">

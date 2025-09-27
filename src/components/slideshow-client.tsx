@@ -9,6 +9,7 @@ import { LoaderCircle, MapPin } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import { getNextBucketAssets, getImageUrl, getVideoUrl, getThumbnailUrl, getAssetById } from "@/lib/immich";
+import Weather from "./weather";
 
 const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
@@ -239,6 +240,7 @@ export default function SlideshowClient({
           <h3 className="font-bold text-lg md:text-xl text-white/90">
             {format(now, "EEEE, MMMM d")}
           </h3>
+          <Weather />
         </div>
         <div className="text-right">
             <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">

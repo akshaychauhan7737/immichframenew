@@ -6,15 +6,53 @@ import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { LoaderCircle, Video } from "lucide-react";
 
-import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { getNextBucketAssets, getSlideshowData } from "@/app/actions";
+import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "@/lib/types";
+
+const IMAGE_DURATION_S = 5;
+const IMMICH_API_URL = process.env.NEXT_PUBLIC_IMMICH_API_URL;
+const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
 
 type SlideshowClientProps = {
   initialBuckets: ImmichBucket[];
   initialAssets: ImmichAsset[];
 };
 
-const IMAGE_DURATION_S = 5;
+async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]> {
+    if (!IMMICH_API_URL || !IMMICH_API_KEY) {
+        throw new Error("Server not configured for Immich API.");
+    }
+    const headers = {
+        "x-api-key": IMMICH_API_KEY!,
+        "Accept": "application/json",
+    };
+    try {
+        const url = `${IMMICH_API_URL}/api/timeline/bucket?timeBucket=${encodeURIComponent(
+        `${bucket}T00:00:00.000Z`
+        )}&visibility=timeline&withPartners=true&withStacked=true`;
+        
+        const response = await fetch(url, { headers, cache: "no-store" });
+        if (!response.ok) {
+        throw new Error(`Failed to fetch assets for bucket ${bucket}: ${response.statusText}`);
+        }
+        
+        const data: ImmichAssetsResponse = await response.json();
+        
+        const assets: ImmichAsset[] = data.id.map((id, index) => ({
+        id,
+        fileCreatedAt: data.fileCreatedAt[index],
+        isFavorite: data.isFavorite[index],
+        isImage: data.isImage[index],
+        duration: data.duration[index],
+        thumbhash: data.thumbhash[index],
+        livePhotoVideoId: data.livePhotoVideoId[index],
+        }));
+
+        return assets;
+    } catch (error) {
+        console.error(`Error fetching assets for bucket ${bucket}:`, error);
+        return [];
+    }
+}
 
 export default function SlideshowClient({
   initialBuckets,
@@ -111,19 +149,26 @@ export default function SlideshowClient({
   // Prefetching logic
   useEffect(() => {
     const nextAsset = assets[currentAssetIndex + 1];
-    if (nextAsset?.isImage) {
+    if (nextAsset?.isImage && IMMICH_API_URL) {
       const link = document.createElement("link");
       link.rel = "preload";
       link.as = "image";
-      link.href = `/api/immich/asset/${nextAsset.id}/thumbnail?size=preview`;
+      link.href = `${IMMICH_API_URL}/api/asset/${nextAsset.id}/thumbnail?size=preview`;
       document.head.appendChild(link);
       return () => { document.head.removeChild(link); };
     }
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
-  const videoSrc = currentAsset ? `/api/immich/asset/${currentAsset.id}/video/playback` : "";
-  const imageSrc = currentAsset ? `/api/immich/asset/${currentAsset.id}/thumbnail?size=preview` : "";
+  
+  const getAssetUrl = (assetId: string, type: 'thumbnail' | 'video') => {
+    if (!IMMICH_API_URL || !IMMICH_API_KEY) return "";
+    const endpoint = type === 'video' ? 'video/playback' : 'thumbnail?size=preview';
+    return `${IMMICH_API_URL}/api/asset/${assetId}/${endpoint}`;
+  }
+  
+  const videoSrc = currentAsset ? getAssetUrl(currentAsset.id, 'video') : "";
+  const imageSrc = currentAsset ? getAssetUrl(currentAsset.id, 'thumbnail') : "";
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col">
@@ -158,6 +203,7 @@ export default function SlideshowClient({
                   muted
                   playsInline
                   className="max-h-full max-w-full object-contain"
+                  crossOrigin="anonymous"
                 >
                   <source src={videoSrc} type="video/mp4" />
                 </video>
@@ -168,6 +214,8 @@ export default function SlideshowClient({
                   fill
                   className="object-contain"
                   priority
+                  unoptimized // Since we are using a direct URL with API Key
+                  loader={({ src }) => `${src}&apiKey=${IMMICH_API_KEY}`}
                 />
               )}
             </motion.div>

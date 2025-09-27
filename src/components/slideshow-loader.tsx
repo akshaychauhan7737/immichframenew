@@ -5,8 +5,71 @@ import { LoaderCircle } from "lucide-react";
 import { format } from "date-fns";
 
 import SlideshowClient from "@/components/slideshow-client";
-import { getSlideshowData } from "@/app/actions";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
+
+const IMMICH_API_URL = process.env.NEXT_PUBLIC_IMMICH_API_URL;
+const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
+
+async function getBuckets(): Promise<ImmichBucket[]> {
+    if (!IMMICH_API_URL || !IMMICH_API_KEY) {
+      throw new Error("Server not configured for Immich API.");
+    }
+    const headers = {
+      "x-api-key": IMMICH_API_KEY!,
+      "Accept": "application/json",
+    };
+    try {
+      const response = await fetch(
+        `${IMMICH_API_URL}/api/timeline/buckets?visibility=timeline&withPartners=true&withStacked=true`,
+        { headers, cache: "no-store" }
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch buckets: ${response.statusText}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error fetching Immich buckets:", error);
+      return [];
+    }
+}
+
+async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
+    if (!IMMICH_API_URL || !IMMICH_API_KEY) {
+      throw new Error("Server not configured for Immich API.");
+    }
+    const headers = {
+        "x-api-key": IMMICH_API_KEY!,
+        "Accept": "application/json",
+    };
+    try {
+      const url = `${IMMICH_API_URL}/api/timeline/bucket?timeBucket=${encodeURIComponent(
+        `${bucket}T00:00:00.000Z`
+      )}&visibility=timeline&withPartners=true&withStacked=true`;
+      
+      const response = await fetch(url, { headers, cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assets for bucket ${bucket}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      const assets: ImmichAsset[] = data.id.map((id: string, index: number) => ({
+        id,
+        fileCreatedAt: data.fileCreatedAt[index],
+        isFavorite: data.isFavorite[index],
+        isImage: data.isImage[index],
+        duration: data.duration[index],
+        thumbhash: data.thumbhash[index],
+        livePhotoVideoId: data.livePhotoVideoId[index],
+      }));
+  
+      return assets;
+    } catch (error) {
+      console.error(`Error fetching assets for bucket ${bucket}:`, error);
+      return [];
+    }
+}
+
 
 export default function SlideshowLoader() {
   const [data, setData] = useState<{
@@ -27,13 +90,27 @@ export default function SlideshowLoader() {
 
     const fetchData = async () => {
       try {
-        const result = await getSlideshowData();
+        if (!IMMICH_API_URL || !IMMICH_API_KEY) {
+          throw new Error("Immich API URL or Key is not configured in environment variables.");
+        }
+        
+        const buckets = await getBuckets();
         if (isCancelled) return;
 
-        if (!result || result.buckets.length === 0 || result.assets.length === 0) {
-          throw new Error("No assets found or failed to connect.");
+        if (!buckets || buckets.length === 0) {
+          throw new Error("No buckets found or failed to connect.");
         }
-        setData(result);
+        
+        const firstBucket = buckets[0];
+        const assets = await getAssetsForBucket(firstBucket.timeBucket);
+
+        if (isCancelled) return;
+
+        if (assets.length === 0) {
+            throw new Error("No assets found in the first bucket.");
+        }
+
+        setData({ buckets, assets });
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;

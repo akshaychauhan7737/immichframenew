@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/immich/:path*',
+        destination: `${process.env.NEXT_PUBLIC_IMMICH_API_URL}/:path*`,
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

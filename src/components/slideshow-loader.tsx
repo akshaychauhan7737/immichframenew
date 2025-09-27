@@ -13,6 +13,7 @@ export default function SlideshowLoader() {
   const [data, setData] = useState<{
     buckets: ImmichBucket[];
     assets: ImmichAsset[];
+    bucketIndex: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
@@ -52,7 +53,7 @@ export default function SlideshowLoader() {
             throw new Error("No assets found in any available buckets.");
         }
 
-        setData({ buckets, assets: firstAssets });
+        setData({ buckets, assets: firstAssets, bucketIndex: firstBucketIndex });
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;
@@ -118,6 +119,7 @@ export default function SlideshowLoader() {
     <SlideshowClient
       initialBuckets={data.buckets}
       initialAssets={data.assets}
+      initialBucketIndex={data.bucketIndex}
     />
   );
 }

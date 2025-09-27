@@ -15,14 +15,16 @@ const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
 type SlideshowClientProps = {
   initialBuckets: ImmichBucket[];
   initialAssets: ImmichAsset[];
+  initialBucketIndex: number;
 };
 
 export default function SlideshowClient({
   initialBuckets,
   initialAssets,
+  initialBucketIndex,
 }: SlideshowClientProps) {
   const [buckets, setBuckets] = useState<ImmichBucket[]>(initialBuckets);
-  const [currentBucketIndex, setCurrentBucketIndex] = useState(0);
+  const [currentBucketIndex, setCurrentBucketIndex] = useState(initialBucketIndex);
   const [assets, setAssets] = useState<ImmichAsset[]>(initialAssets);
   const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,7 +97,7 @@ export default function SlideshowClient({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [assets.length, currentAssetIndex, buckets.length, currentBucketIndex, isLoading]);
 
-  const isVideo = currentAsset?.livePhotoVideoId || (currentAsset && !currentAsset.isImage);
+  const isVideo = currentAsset?.duration && currentAsset.duration !== '0:00:00.000000';
 
   // Auto-advance logic
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function SlideshowClient({
   useEffect(() => {
     if (currentAssetIndex < assets.length - 1) {
       const nextAsset = assets[currentAssetIndex + 1];
-      if (nextAsset?.isImage) {
+      if (nextAsset && !nextAsset.duration) { // is image
         const img = new window.Image();
         img.src = getAssetUrl(nextAsset.id, 'thumbnail');
       }
@@ -137,7 +139,8 @@ export default function SlideshowClient({
   }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
-  const videoSrc = currentAsset ? getAssetUrl(currentAsset.id, 'video') : "";
+  
+  const videoSrc = currentAsset ? `${getAssetUrl(currentAsset.id, 'video')}&apiKey=${IMMICH_API_KEY}` : "";
   const imageSrc = currentAsset ? getAssetUrl(currentAsset.id, 'thumbnail') : "";
 
   return (

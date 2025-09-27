@@ -15,10 +15,14 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
+    const immichApiUrl = process.env.NEXT_PUBLIC_IMMICH_API_URL;
+    if (!immichApiUrl) {
+      return [];
+    }
     return [
       {
         source: '/api/immich/:path*',
-        destination: `${process.env.NEXT_PUBLIC_IMMICH_API_URL}/api/:path*`,
+        destination: `${immichApiUrl}/api/:path*`,
       },
     ]
   },

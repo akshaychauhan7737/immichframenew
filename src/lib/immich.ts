@@ -1,8 +1,6 @@
 import type { ImmichAsset, ImmichBucket, ImmichAssetsResponse } from "./types";
 
 const IMMICH_API_KEY = process.env.NEXT_PUBLIC_IMMICH_API_KEY;
-
-// The API URL is now relative to our own server, which will proxy to the real Immich API
 const API_BASE_PATH = "/api/immich";
 
 async function immichFetch(path: string) {
@@ -13,13 +11,13 @@ async function immichFetch(path: string) {
         "x-api-key": IMMICH_API_KEY!,
         "Accept": "application/json",
     };
-    // Construct the full URL to our local proxy
     const url = `${API_BASE_PATH}${path}`;
 
     const response = await fetch(url, { headers, cache: "no-store" });
 
     if (!response.ok) {
-        throw new Error(`Immich API request failed: ${response.status} ${response.statusText}`);
+        const errorBody = await response.text();
+        throw new Error(`Immich API request failed: ${response.status} ${response.statusText}. Body: ${errorBody}`);
     }
     return response.json();
 }
@@ -35,7 +33,6 @@ export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]>
     
     const data: ImmichAssetsResponse = await immichFetch(path);
     
-    // The Immich API returns a non-standard structure, so we normalize it here.
     if (!data.id || !Array.isArray(data.id)) return [];
 
     const assets: ImmichAsset[] = data.id.map((id: string, index: number) => ({
@@ -51,21 +48,19 @@ export async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]>
     return assets;
 }
 
-
 export async function getNextBucketAssets(bucket: string): Promise<ImmichAsset[]> {
     return getAssetsForBucket(bucket);
 }
 
 export function getAssetUrl(asset: ImmichAsset, type: 'thumbnail' | 'video'): string {
     if (type === 'video') {
-        // Videos are disabled for now
         return "";
     }
     
-    let params = `?size=preview`;
+    let params = `?size=thumbnail`;
     if (asset.thumbhash) {
         params += `&c=${encodeURIComponent(asset.thumbhash)}`;
     }
-    // Correct endpoint for assets is /asset/{assetId}/thumbnail (singular) proxied through our API
-    return `${API_BASE_PATH}/asset/${asset.id}/thumbnail${params}`;
+    // The asset path for the proxy is /api/immich/assets/... not /api/immich/asset/...
+    return `${API_BASE_PATH}/assets/${asset.id}/thumbnail${params}`;
 }

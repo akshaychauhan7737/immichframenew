@@ -59,8 +59,8 @@ export function getAssetUrl(asset: ImmichAsset, type: 'thumbnail' | 'video'): st
     
     let params = `?size=preview`;
     if (asset.thumbhash) {
-        params += `&c=${encodeURIComponent(asset.thumbhash)}`;
+        params += `&thumbhash=${encodeURIComponent(asset.thumbhash)}`;
     }
-    // The asset path for the proxy is /api/immich/assets/... not /api/immich/asset/...
-    return `${API_BASE_PATH}/assets/${asset.id}/thumbnail${params}`;
+    // Use the new proxy route for images
+    return `/api/image-proxy/${asset.id}${params}`;
 }

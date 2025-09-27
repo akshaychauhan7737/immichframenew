@@ -21,8 +21,12 @@ const nextConfig: NextConfig = {
     }
     return [
       {
-        source: '/api/immich/:path*',
-        destination: `${immichApiUrl}/api/:path*`,
+        source: '/api/immich/timeline/buckets',
+        destination: `${immichApiUrl}/api/timeline/buckets`,
+      },
+       {
+        source: '/api/immich/timeline/bucket',
+        destination: `${immichApiUrl}/api/timeline/bucket`,
       },
     ]
   },

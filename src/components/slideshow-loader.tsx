@@ -89,11 +89,18 @@ export default function SlideshowLoader() {
                 </p>
             </div>
         </div>
-        <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-t from-black/50 to-transparent">
-          <div>
-            <h3 className="font-bold">{format(now, "MMMM d, yyyy")}</h3>
-            <p className="text-sm text-white/80">{format(now, "h:mm:ss a")}</p>
-          </div>
+        <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
+            <div>
+              <h3 className="font-bold text-lg md:text-xl text-white/90">
+                {format(now, "EEEE, MMMM d")}
+              </h3>
+            </div>
+            <div className="text-right">
+                <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">
+                  {format(now, "h:mm")}
+                  <span className="text-2xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+                </h3>
+            </div>
         </footer>
       </div>
     );
@@ -105,11 +112,18 @@ export default function SlideshowLoader() {
          <div className="flex-1 flex items-center justify-center min-h-0">
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         </div>
-        <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-t from-black/50 to-transparent">
-          <div>
-            <h3 className="font-bold">{format(now, "MMMM d, yyyy")}</h3>
-            <p className="text-sm text-white/80">{format(now, "h:mm:ss a")}</p>
-          </div>
+        <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
+            <div>
+              <h3 className="font-bold text-lg md:text-xl text-white/90">
+                {format(now, "EEEE, MMMM d")}
+              </h3>
+            </div>
+            <div className="text-right">
+                <h3 className="font-bold text-5xl md:text-7xl leading-none whitespace-nowrap">
+                  {format(now, "h:mm")}
+                  <span className="text-2xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+                </h3>
+            </div>
         </footer>
       </div>
     );

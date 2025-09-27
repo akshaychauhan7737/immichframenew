@@ -10,7 +10,6 @@ import { LoaderCircle, MapPin } from "lucide-react";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import Weather from "./weather";
 
-const IMAGE_DURATION_S = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
 const STORAGE_KEY = "slideshow_state";
 
@@ -65,6 +64,7 @@ interface SlideshowClientProps {
     initialAssets: ImmichAsset[];
     initialBucketIndex: number;
     initialAssetIndex: number;
+    duration: number;
 }
 
 export default function SlideshowClient({
@@ -72,6 +72,7 @@ export default function SlideshowClient({
   initialAssets,
   initialBucketIndex,
   initialAssetIndex,
+  duration,
 }: SlideshowClientProps) {
   const [buckets] = useState<ImmichBucket[]>(initialBuckets);
   const [currentBucketIndex, setCurrentBucketIndex] = useState(initialBucketIndex);
@@ -180,9 +181,9 @@ export default function SlideshowClient({
   useEffect(() => {
     if (isLoading || !currentAsset || currentAsset.type !== 'IMAGE') return;
     
-    const timer = setTimeout(navigateToNext, IMAGE_DURATION_S * 1000);
+    const timer = setTimeout(navigateToNext, duration * 1000);
     return () => clearTimeout(timer);
-  }, [currentAsset, isLoading]);
+  }, [currentAsset, isLoading, duration, navigateToNext]);
 
   // Timeout for stuck videos
   useEffect(() => {
@@ -194,7 +195,7 @@ export default function SlideshowClient({
     }, VIDEO_TIMEOUT_S * 1000);
 
     return () => clearTimeout(videoStuckTimeout);
-  }, [currentAsset, isLoading]);
+  }, [currentAsset, isLoading, navigateToNext]);
 
 
   // Prefetching logic for next image
@@ -282,15 +283,16 @@ export default function SlideshowClient({
       {/* Footer */}
       <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
         <div className="flex flex-col">
-          <h3 className="font-bold text-lg md:text-xl text-white/90">
-            {format(now, "EEEE, MMMM d")}
-          </h3>
+          <div className="font-bold text-lg md:text-xl text-white/90 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+            <span>{format(now, "EEEE,")}</span>
+            <span>{format(now, "MMMM d")}</span>
+          </div>
           <Weather />
         </div>
         <div className="text-right">
-            <h3 className="font-bold text-6xl md:text-7xl leading-none whitespace-nowrap">
+            <h3 className="font-bold text-5xl sm:text-6xl md:text-7xl leading-none whitespace-nowrap">
               {format(now, "h:mm")}
-              <span className="text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+              <span className="text-2xl sm:text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
             </h3>
         </div>
       </footer>

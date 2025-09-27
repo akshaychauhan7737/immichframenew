@@ -58,6 +58,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
     assets: ImmichAsset[];
     bucketIndex: number;
     assetIndex: number;
+    duration: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
@@ -75,6 +76,9 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
 
     const fetchData = async () => {
       try {
+        // Read duration from env. This runs on the server, so it's safe.
+        const duration = parseInt(process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S || '5', 10);
+        
         // 1. Get all available buckets
         const buckets = await getBuckets();
         if (isCancelled || !buckets || buckets.length === 0) {
@@ -147,7 +151,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
             throw new Error("No assets found in any available buckets.");
         }
 
-        setData({ buckets, assets: initialAssets, bucketIndex: initialBucketIndex, assetIndex: initialAssetIndex });
+        setData({ buckets, assets: initialAssets, bucketIndex: initialBucketIndex, assetIndex: initialAssetIndex, duration });
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;
@@ -185,15 +189,16 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
         </div>
         {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
             <div className="flex flex-col">
-              <h3 className="font-bold text-lg md:text-xl text-white/90">
-                {format(now, "EEEE, MMMM d")}
-              </h3>
+              <div className="font-bold text-lg md:text-xl text-white/90 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+                <span>{format(now, "EEEE,")}</span>
+                <span>{format(now, "MMMM d")}</span>
+              </div>
               <Weather />
             </div>
             <div className="text-right">
-                <h3 className="font-bold text-6xl md:text-7xl leading-none whitespace-nowrap">
+                <h3 className="font-bold text-5xl sm:text-6xl md:text-7xl leading-none whitespace-nowrap">
                   {format(now, "h:mm")}
-                  <span className="text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+                  <span className="text-2xl sm:text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
                 </h3>
             </div>
         </footer>}
@@ -209,15 +214,16 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
         </div>
         {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
             <div className="flex flex-col">
-              <h3 className="font-bold text-lg md:text-xl text-white/90">
-                {format(now, "EEEE, MMMM d")}
-              </h3>
+              <div className="font-bold text-lg md:text-xl text-white/90 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+                <span>{format(now, "EEEE,")}</span>
+                <span>{format(now, "MMMM d")}</span>
+              </div>
               <Weather />
             </div>
             <div className="text-right">
-                <h3 className="font-bold text-6xl md:text-7xl leading-none whitespace-nowrap">
+                <h3 className="font-bold text-5xl sm:text-6xl md:text-7xl leading-none whitespace-nowrap">
                   {format(now, "h:mm")}
-                  <span className="text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
+                  <span className="text-2xl sm:text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
                 </h3>
             </div>
         </footer>}
@@ -231,6 +237,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
       initialAssets={data.assets}
       initialBucketIndex={data.bucketIndex}
       initialAssetIndex={data.assetIndex}
+      duration={data.duration}
     />
   );
 }

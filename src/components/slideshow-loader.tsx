@@ -28,9 +28,11 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
     assetIndex: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Only run this effect on the client
+    setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
@@ -149,7 +151,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
                 </p>
             </div>
         </div>
-        <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
+        {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
             <div>
               <h3 className="font-bold text-lg md:text-xl text-white/90">
                 {format(now, "EEEE, MMMM d")}
@@ -161,7 +163,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
                   <span className="text-2xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
                 </h3>
             </div>
-        </footer>
+        </footer>}
       </div>
     );
   }
@@ -172,7 +174,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
          <div className="flex-1 flex items-center justify-center min-h-0">
             <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         </div>
-        <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
+        {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
             <div>
               <h3 className="font-bold text-lg md:text-xl text-white/90">
                 {format(now, "EEEE, MMMM d")}
@@ -184,7 +186,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
                   <span className="text-2xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
                 </h3>
             </div>
-        </footer>
+        </footer>}
       </div>
     );
   }

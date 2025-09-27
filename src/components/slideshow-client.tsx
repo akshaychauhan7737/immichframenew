@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { LoaderCircle, Video } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
-import { getNextBucketAssets } from "@/app/actions";
+import { getNextBucketAssets, getSlideshowData } from "@/app/actions";
 
 type SlideshowClientProps = {
   initialBuckets: ImmichBucket[];

@@ -157,8 +157,8 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
       } catch (e: any) {
         if (isCancelled) return;
         setError(e.message || "An unknown error occurred.");
-        // Retry after 5 seconds
-        if (!data) { // Prevent retries if we already have data
+        // Retry after 5 seconds if we haven't successfully loaded data yet
+        if (!data) { 
           retryTimeout = setTimeout(fetchData, 5000);
         }
       }
@@ -170,50 +170,16 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
       isCancelled = true;
       clearTimeout(retryTimeout);
     };
-  }, [startBucket, data]); // Add data to dependency array
+  }, [startBucket]); // Removed `data` from dependencies to prevent re-fetching on success
 
-  if (error && !data) {
+  if (!data) {
     return (
       <div className="fixed inset-0 bg-black text-white flex flex-col">
          <div className="flex-1 flex items-center justify-center min-h-0">
             <div className="flex flex-col items-center justify-center text-center p-4">
                 <LoaderCircle className="w-12 h-12 text-white/50 animate-spin mb-4" />
-                <h2 className="text-2xl font-semibold">Connecting to Immich...</h2>
-                <p className="mt-2 text-muted-foreground">
-                    Could not connect or find any photos. Retrying...
-                </p>
-                <p className="mt-1 text-sm text-red-400">
-                    Error: {error}
-                </p>
-                <p className="mt-4 text-sm text-muted-foreground">
-                    Please check your environment variables and ensure your Immich server is running and contains photos.
-                </p>
+                {error && <p className="mt-2 text-muted-foreground">Connecting to Immich...</p>}
             </div>
-        </div>
-        {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
-            <div className="flex flex-col">
-              <div className="font-bold text-lg md:text-xl text-white/90 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-                <span>{format(now, "EEEE,")}</span>
-                <span>{format(now, "MMMM d")}</span>
-              </div>
-              <Weather />
-            </div>
-            <div className="text-right">
-                <h3 className="font-bold text-5xl sm:text-6xl md:text-7xl leading-none whitespace-nowrap">
-                  {format(now, "h:mm")}
-                  <span className="text-2xl sm:text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
-                </h3>
-            </div>
-        </footer>}
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-       <div className="fixed inset-0 bg-black text-white flex flex-col">
-         <div className="flex-1 flex items-center justify-center min-h-0">
-            <LoaderCircle className="w-12 h-12 text-white/50 animate-spin" />
         </div>
         {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
             <div className="flex flex-col">

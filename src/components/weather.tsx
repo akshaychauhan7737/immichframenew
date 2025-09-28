@@ -22,21 +22,23 @@ const getAqiInfo = (aqi: number): { text: string, color: string } => {
 
 export default function Weather() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchWeather = async () => {
       try {
         const response = await fetch('/api/weather', { cache: 'no-store' });
         if (!response.ok) {
-          throw new Error('Failed to fetch weather data');
+          // Fail silently and log the error.
+          console.error('Failed to fetch weather data');
+          setWeather(null); // Clear previous weather data on failure
+          return;
         }
         const data = await response.json();
         setWeather(data);
-        setError(null);
       } catch (err: any) {
-        setError(err.message);
-        console.error(err);
+        // Fail silently and log the error.
+        console.error('Error fetching weather data:', err);
+        setWeather(null); // Clear previous weather data on failure
       }
     };
 
@@ -47,8 +49,8 @@ export default function Weather() {
     return () => clearInterval(interval);
   }, []);
 
-  if (error || !weather) {
-    return <div className="text-sm text-white/50 h-5 capitalize">{error ? 'Weather unavailable' : ''}</div>;
+  if (!weather) {
+    return <div className="h-5" />; // Return an empty div with a fixed height to prevent layout shifts
   }
   
   const aqiInfo = getAqiInfo(weather.aqi);

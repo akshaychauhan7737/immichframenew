@@ -43,8 +43,8 @@ export default function Weather() {
     };
 
     fetchWeather();
-    // Fetch weather every minute
-    const interval = setInterval(fetchWeather, 60 * 1000); 
+    // Fetch weather every 10 minutes
+    const interval = setInterval(fetchWeather, 10 * 60 * 1000); 
 
     return () => clearInterval(interval);
   }, []);

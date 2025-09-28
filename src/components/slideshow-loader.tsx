@@ -150,14 +150,17 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
         if (initialAssets.length === 0) {
             throw new Error("No assets found in any available buckets.");
         }
-
+        
+        if (isCancelled) return;
         setData({ buckets, assets: initialAssets, bucketIndex: initialBucketIndex, assetIndex: initialAssetIndex, duration });
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;
         setError(e.message || "An unknown error occurred.");
         // Retry after 5 seconds
-        retryTimeout = setTimeout(fetchData, 5000);
+        if (!data) { // Prevent retries if we already have data
+          retryTimeout = setTimeout(fetchData, 5000);
+        }
       }
     };
 
@@ -167,7 +170,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
       isCancelled = true;
       clearTimeout(retryTimeout);
     };
-  }, [startBucket]);
+  }, [startBucket, data]); // Add data to dependency array
 
   if (error && !data) {
     return (

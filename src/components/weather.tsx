@@ -26,19 +26,28 @@ export default function Weather() {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const response = await fetch('/api/weather', { cache: 'no-store' });
-        if (!response.ok) {
-          // Fail silently and log the error.
+        const [weatherResponse, airPollutionResponse] = await Promise.all([
+          fetch('/api/weather'),
+          fetch('/api/air_pollution')
+        ]);
+        
+        if (!weatherResponse.ok || !airPollutionResponse.ok) {
           console.error('Failed to fetch weather data');
-          setWeather(null); // Clear previous weather data on failure
+          setWeather(null);
           return;
         }
-        const data = await response.json();
-        setWeather(data);
+
+        const weatherData = await weatherResponse.json();
+        const airPollutionData = await airPollutionResponse.json();
+
+        setWeather({
+          temp: Math.round(weatherData.main.temp),
+          description: weatherData.weather[0]?.description || 'N/A',
+          aqi: airPollutionData.list[0]?.main.aqi || 0,
+        });
       } catch (err: any) {
-        // Fail silently and log the error.
         console.error('Error fetching weather data:', err);
-        setWeather(null); // Clear previous weather data on failure
+        setWeather(null);
       }
     };
 

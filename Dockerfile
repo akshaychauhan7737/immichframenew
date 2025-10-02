@@ -1,37 +1,27 @@
 # Stage 1: Build the Next.js application
-FROM node:20-alpine AS builder
+FROM node:18-alpine AS builder
 WORKDIR /app
-
-# Copy package files and install dependencies
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm install
-
-# Copy the rest of the application source code
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Stage 2: Create the production image
-FROM node:20-alpine AS slideshow
-WORKDIR /app
+# Stage 2: Serve the static files with Nginx
+FROM nginx:1.25-alpine AS slideshow
+WORKDIR /usr/share/nginx/html
 
-# Install Nginx and envsubst
-RUN apk add --no-cache nginx gettext
-
-# Copy built app from the builder stage
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
-
-# Copy Nginx configuration and entrypoint script
+# Copy Nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginx.conf /nginx.conf.template
+
+# Copy the built static files from the builder stage
+COPY --from=builder /app/out .
+
+# Copy the startup script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Expose the port Nginx will run on
 EXPOSE 80
 
-# Set the entrypoint
+# The entrypoint script will start Nginx
 ENTRYPOINT ["/entrypoint.sh"]

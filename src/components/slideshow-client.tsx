@@ -54,9 +54,9 @@ async function getAssetById(assetId: string): Promise<ImmichAsset | null> {
 }
 
 // Helper functions to construct media URLs using the proxy
-const getImageUrl = (asset: ImmichAsset) => `/api/image-proxy/${asset.id}?size=preview`;
-const getThumbnailUrl = (asset: ImmichAsset) => `/api/image-proxy/${asset.id}?size=preview${asset.thumbhash ? `&thumbhash=${encodeURIComponent(asset.thumbhash)}` : ''}`;
-const getVideoUrl = (asset: ImmichAsset) => `/api/video-proxy/${asset.id}`;
+const getImageUrl = (asset: ImmichAsset) => `/api/immich/assets/${asset.id}/thumbnail?size=preview`;
+const getThumbnailUrl = (asset: ImmichAsset) => `/api/immich/assets/${asset.id}/thumbnail?size=preview${asset.thumbhash ? `&thumbhash=${encodeURIComponent(asset.thumbhash)}` : ''}`;
+const getVideoUrl = (asset: ImmichAsset) => `/api/immich/assets/${asset.id}/video/playback`;
 
 
 interface SlideshowClientProps {

@@ -80,12 +80,13 @@ export default function SlideshowClient({
   const [currentAssetIndex, setCurrentAssetIndex] = useState(initialAssetIndex);
   const [detailedAsset, setDetailedAsset] = useState<ImmichAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Clock effect
   useEffect(() => {
+    setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
@@ -280,7 +281,7 @@ export default function SlideshowClient({
       </div>
 
       {/* Footer */}
-      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
+      {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">
         <div className="flex flex-col">
           <div className="font-bold text-lg md:text-xl text-white/90 flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
             <span>{format(now, "EEEE,")}</span>
@@ -294,7 +295,7 @@ export default function SlideshowClient({
               <span className="text-2xl sm:text-3xl md:text-4xl text-white/80 align-baseline ml-2">{format(now, "a")}</span>
             </h3>
         </div>
-      </footer>
+      </footer>}
     </div>
   );
 }

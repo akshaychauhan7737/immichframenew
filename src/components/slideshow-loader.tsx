@@ -49,10 +49,10 @@ async function getAssetsForBucket(bucket: string): Promise<ImmichAsset[]> {
 }
 
 interface SlideshowLoaderProps {
-    bucket?: string; // Optional starting bucket
+    startBucket?: string; // Optional starting bucket
 }
 
-export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoaderProps) {
+export default function SlideshowLoader({ startBucket }: SlideshowLoaderProps) {
   const [data, setData] = useState<{
     buckets: ImmichBucket[];
     assets: ImmichAsset[];
@@ -72,7 +72,6 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
 
   useEffect(() => {
     let isCancelled = false;
-    let retryTimeout: NodeJS.Timeout;
 
     const fetchData = async () => {
       try {
@@ -89,7 +88,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
         let initialBucketIndex = -1;
         let initialAssetIndex = 0;
 
-        // 2. If a specific start bucket is provided, use it
+        // 2. If a specific start bucket is provided via URL, use it
         if (startBucket) {
             const startBucketIndex = buckets.findIndex(b => b.timeBucket === startBucket);
             if (startBucketIndex !== -1) {
@@ -156,11 +155,11 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
         setError(null);
       } catch (e: any) {
         if (isCancelled) return;
-        setError(e.message || "An unknown error occurred.");
-        // Retry after 5 seconds if we haven't successfully loaded data yet
-        if (!data) { 
-          retryTimeout = setTimeout(fetchData, 5000);
-        }
+        const errorMessage = e.message || "An unknown error occurred.";
+        console.error("SlideshowLoader Error:", errorMessage);
+        setError(errorMessage);
+        // Retry after 5 seconds
+        setTimeout(fetchData, 5000);
       }
     };
 
@@ -168,9 +167,8 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
 
     return () => {
       isCancelled = true;
-      clearTimeout(retryTimeout);
     };
-  }, [startBucket, data]);
+  }, [startBucket]);
 
   if (!data) {
     return (
@@ -178,7 +176,8 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
          <div className="flex-1 flex items-center justify-center min-h-0">
             <div className="flex flex-col items-center justify-center text-center p-4">
                 <LoaderCircle className="w-12 h-12 text-white/50 animate-spin mb-4" />
-                {error && <p className="mt-2 text-muted-foreground">Connecting to Immich...</p>}
+                <p className="mt-2 text-muted-foreground">Connecting to Immich...</p>
+                {error && <p className="text-xs text-red-500/50 mt-2 max-w-sm truncate">({error})</p>}
             </div>
         </div>
         {now && <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-end justify-between p-4 md:p-6 bg-gradient-to-t from-black/50 to-transparent">

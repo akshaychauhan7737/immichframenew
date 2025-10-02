@@ -14,3 +14,9 @@ services:
       - NEXT_PUBLIC_LATITUDE=28.4739606
       - NEXT_PUBLIC_LONGITUDE=76.9758269
     restart: unless-stopped
+    networks:
+      - slideshow-net
+
+networks:
+  slideshow-net:
+    driver: bridge

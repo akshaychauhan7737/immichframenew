@@ -1,4 +1,3 @@
-
 import SlideshowLauncher from "@/components/slideshow-launcher";
 import type { ImmichBucket } from "@/lib/types";
 

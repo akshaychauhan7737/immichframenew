@@ -1,0 +1,30 @@
+server {
+    listen 80;
+    server_name _;
+    
+    # The root is the output of `next export`
+    root /app/out;
+
+    location /api/immich/ {
+        proxy_pass ${NEXT_PUBLIC_IMMICH_API_URL}/api/; 
+        proxy_set_header x-api-key "${NEXT_PUBLIC_IMMICH_API_KEY}";
+        proxy_set_header Accept "application/json";
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+    }
+
+    location /api/weather {
+         proxy_pass http://api.openweathermap.org/data/2.5/weather?lat=${NEXT_PUBLIC_LATITUDE}&lon=${NEXT_PUBLIC_LONGITUDE}&units=metric&appid=${OPENWEATHER_API_KEY};
+         proxy_no_cache 1;
+         proxy_cache_bypass 1;
+    }
+     location /api/air_pollution {
+         proxy_pass http://api.openweathermap.org/data/2.5/air_pollution?lat=${NEXT_PUBLIC_LATITUDE}&lon=${NEXT_PUBLIC_LONGITUDE}&appid=${OPENWEATHER_API_KEY};
+         proxy_no_cache 1;
+         proxy_cache_bypass 1;
+    }
+
+    location / {
+        try_files $uri $uri.html /index.html;
+    }
+}

@@ -1,7 +1,7 @@
 # Stage 1: Build the Next.js application
 FROM node:18-alpine AS builder
 WORKDIR /app
-COPY package.json ./
+COPY package*.json ./
 RUN npm install
 COPY . .
 RUN npm run build
@@ -13,13 +13,16 @@ WORKDIR /app
 # Copy built assets from the builder stage
 COPY --from=builder /app/out ./out
 
-# Copy Nginx configuration and entrypoint script
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Copy Nginx configuration files
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
+
+# Copy and set permissions for the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose port 80 for Nginx
 EXPOSE 80
 
-# Run the entrypoint script to start the container
-CMD ["/entrypoint.sh"]
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

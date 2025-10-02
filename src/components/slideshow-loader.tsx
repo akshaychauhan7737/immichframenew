@@ -77,7 +77,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
     const fetchData = async () => {
       try {
         const durationEnv = process.env.NEXT_PUBLIC_SLIDESHOW_DURATION_S;
-        const duration = durationEnv ? parseInt(durationEnv, 10) : 12;
+        const duration = durationEnv ? parseInt(durationEnv, 10) : 20;
         
         // 1. Get all available buckets
         const buckets = await getBuckets();
@@ -170,7 +170,7 @@ export default function SlideshowLoader({ bucket: startBucket }: SlideshowLoader
       isCancelled = true;
       clearTimeout(retryTimeout);
     };
-  }, [startBucket]); // Removed `data` from dependencies to prevent re-fetching on success
+  }, [startBucket, data]);
 
   if (!data) {
     return (

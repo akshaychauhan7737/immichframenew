@@ -1,14 +1,9 @@
-# Dockerfile
-
-# --- Build Stage ---
+# Stage 1: Builder
 FROM node:20-alpine AS builder
-
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if available)
-COPY package*.json ./
-
-# Install dependencies
+# Copy package.json and install dependencies
+COPY package.json ./
 RUN npm install
 
 # Copy the rest of the application source code
@@ -17,21 +12,29 @@ COPY . .
 # Build the Next.js application
 RUN npm run build
 
-# --- Runner Stage ---
+# Stage 2: Runner
 FROM node:20-alpine AS runner
-
 WORKDIR /app
 
-# Set environment to production
-ENV NODE_ENV=production
+# Install Nginx
+RUN apk add --no-cache nginx
 
 # Copy built assets from the builder stage
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/next.config.ts ./next.config.ts
+COPY --from=builder /app/node_modules ./node_modules
 
-# Expose the port the app runs on
-EXPOSE 3000
+# Copy Nginx configuration and entrypoint script
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY entrypoint.sh ./entrypoint.sh
 
-# Start the application
-CMD ["npm", "start"]
+# Make entrypoint script executable
+RUN chmod +x ./entrypoint.sh
+
+# Expose the Nginx port
+EXPOSE 80
+
+# Run the entrypoint script
+CMD ["./entrypoint.sh"]

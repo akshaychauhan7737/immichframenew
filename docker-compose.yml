@@ -4,7 +4,7 @@ services:
   slideshow:
     build: .
     ports:
-      - "9002:3000"
+      - "9002:80"
     environment:
       # --- App URL (Required for Server-Side Rendering) ---
       # This should be the URL that the app is accessible from on your network
@@ -17,8 +17,8 @@ services:
       - NEXT_PUBLIC_IMMICH_API_KEY=isqXAFo82NCwDd99wU7LDXILBDrY2fwGRIqcHlfUdZc
 
       # --- Slideshow Settings (Optional) ---
-      # The duration (in seconds) each image is displayed. Defaults to 12.
-      - NEXT_PUBLIC_SLIDESHOW_DURATION_S=15
+      # The duration (in seconds) each image is displayed. Defaults to 20.
+      - NEXT_PUBLIC_SLIDESHOW_DURATION_S=20
 
       # --- OpenWeatherMap API Settings ---
       - OPENWEATHER_API_KEY=694636f0bd371181225ff30313f478b2

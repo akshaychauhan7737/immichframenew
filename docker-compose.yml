@@ -7,16 +7,9 @@ services:
       - "9002:80"
     environment:
       # --- Immich Server Configuration ---
-      # Replace with your Immich server's local network URL
+      # These are now only used by the Nginx proxy at startup.
       - NEXT_PUBLIC_IMMICH_API_URL=http://192.168.29.3:2283
-      # Replace with your Immich API Key
       - NEXT_PUBLIC_IMMICH_API_KEY=isqXAFo82NCwDd99wU7LDXILBDrY2fwGRIqcHlfUdZc
-
-      # --- Slideshow Settings (Optional) ---
-      # The duration (in seconds) each image is displayed. Defaults to 20.
-      - NEXT_PUBLIC_SLIDESHOW_DURATION_S=20
-
-      # --- OpenWeatherMap API Settings ---
       - OPENWEATHER_API_KEY=694636f0bd371181225ff30313f478b2
       - NEXT_PUBLIC_LATITUDE=28.4739606
       - NEXT_PUBLIC_LONGITUDE=76.9758269

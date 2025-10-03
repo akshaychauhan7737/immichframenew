@@ -197,17 +197,6 @@ export default function SlideshowClient({
     return () => clearTimeout(videoStuckTimeout);
   }, [currentAsset, isLoading, navigateToNext]);
 
-
-  // Prefetching logic for next image
-  useEffect(() => {
-    if (currentAssetIndex < assets.length - 1) {
-      const nextAsset = assets[currentAssetIndex + 1];
-      if (nextAsset && nextAsset.type === 'IMAGE') { 
-        const img = new window.Image();
-        img.src = getImageUrl(nextAsset);
-      }
-    }
-  }, [assets, currentAssetIndex]);
   
   const assetDate = currentAsset ? new Date(currentAsset.fileCreatedAt) : new Date();
   const locationParts = [

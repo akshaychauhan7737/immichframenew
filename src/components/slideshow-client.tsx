@@ -83,6 +83,43 @@ export default function SlideshowClient({
   const [now, setNow] = useState<Date | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // Screen Wake Lock
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          wakeLockRef.current.addEventListener('release', () => {
+            console.log('Screen Wake Lock was released.');
+          });
+          console.log('Screen Wake Lock is active.');
+        } catch (err: any) {
+          console.error(`Failed to acquire Screen Wake Lock: ${err.name}, ${err.message}`);
+        }
+      } else {
+        console.warn('Screen Wake Lock API not supported.');
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+
+    requestWakeLock();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Clock effect
   useEffect(() => {

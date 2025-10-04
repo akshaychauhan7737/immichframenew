@@ -88,36 +88,50 @@ export default function SlideshowClient({
 
   // Screen Wake Lock
   useEffect(() => {
-    let wakeLock: WakeLockSentinel | null = null;
+    // Function to request the wake lock
     const requestWakeLock = async () => {
+      // Check if the API is supported
       if ('wakeLock' in navigator) {
         try {
-          wakeLock = await navigator.wakeLock.request('screen');
-          wakeLock.addEventListener('release', () => {
-            console.log('Screen Wake Lock released.');
+          // Request the lock and store the sentinel
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          // Listen for the lock being released
+          wakeLockRef.current.addEventListener('release', () => {
+            // If the lock is released, clear our reference
+            wakeLockRef.current = null;
           });
-          console.log('Screen Wake Lock active.');
         } catch (err: any) {
-          console.error(`Failed to acquire Screen Wake Lock: ${err.name}, ${err.message}`);
+          // If the request fails, the lock is not acquired
+          wakeLockRef.current = null;
         }
       }
     };
-
+  
+    // Function to handle visibility changes
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !wakeLock) {
+      // If the page is visible and we don't have a lock, request one
+      if (document.visibilityState === 'visible' && !wakeLockRef.current) {
         requestWakeLock();
       }
     };
-
+  
+    // Request the lock when the component mounts
     requestWakeLock();
+  
+    // Add event listeners to re-acquire the lock if the tab becomes visible again
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+    document.addEventListener('fullscreenchange', handleVisibilityChange);
+  
+    // Cleanup function to run when the component unmounts
     return () => {
-      if (wakeLock) {
-        wakeLock.release();
-        wakeLock = null;
+      // If we have a wake lock, release it
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release();
+        wakeLockRef.current = null;
       }
+      // Remove the event listeners
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleVisibilityChange);
     };
   }, []);
 

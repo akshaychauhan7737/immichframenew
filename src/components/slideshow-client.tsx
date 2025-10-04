@@ -88,24 +88,23 @@ export default function SlideshowClient({
 
   // Screen Wake Lock
   useEffect(() => {
+    let wakeLock: WakeLockSentinel | null = null;
     const requestWakeLock = async () => {
       if ('wakeLock' in navigator) {
         try {
-          wakeLockRef.current = await navigator.wakeLock.request('screen');
-          wakeLockRef.current.addEventListener('release', () => {
-            console.log('Screen Wake Lock was released.');
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            console.log('Screen Wake Lock released.');
           });
-          console.log('Screen Wake Lock is active.');
+          console.log('Screen Wake Lock active.');
         } catch (err: any) {
           console.error(`Failed to acquire Screen Wake Lock: ${err.name}, ${err.message}`);
         }
-      } else {
-        console.warn('Screen Wake Lock API not supported.');
       }
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !wakeLock) {
         requestWakeLock();
       }
     };
@@ -114,9 +113,9 @@ export default function SlideshowClient({
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      if (wakeLockRef.current) {
-        wakeLockRef.current.release();
-        wakeLockRef.current = null;
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };

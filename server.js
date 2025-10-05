@@ -17,13 +17,6 @@ const LONGITUDE = process.env.LONGITUDE;
 if (!IMMICH_URL || !IMMICH_KEY || !OPENWEATHER_KEY || !LATITUDE || !LONGITUDE) {
   console.error('FATAL: One or more required environment variables are missing.');
   console.error('Please check your docker-compose.yml file and ensure all variables are set.');
-  console.error('Missing variables:', {
-    IMMICH_URL: !IMMICH_URL,
-    IMMICH_API_KEY: !IMMICH_KEY,
-    OPENWEATHER_API_KEY: !OPENWEATHER_KEY,
-    LATITUDE: !LATITUDE,
-    LONGITUDE: !LONGITUDE,
-  });
   process.exit(1);
 }
 
@@ -34,11 +27,6 @@ const immichProxy = createProxyMiddleware({
   pathRewrite: { '^/api/immich': '/api' }, // Rewrite /api/immich to /api for Immich server
   onProxyReq: (proxyReq, req, res) => {
     proxyReq.setHeader('x-api-key', IMMICH_KEY);
-  },
-  onProxyRes: (proxyRes, req, res) => {
-    // Remove security headers that might block in-browser rendering
-    delete proxyRes.headers['x-frame-options'];
-    delete proxyRes.headers['content-security-policy'];
   },
   logLevel: 'info'
 });

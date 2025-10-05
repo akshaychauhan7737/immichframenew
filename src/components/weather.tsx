@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface WeatherData {
   temp: number;
@@ -22,6 +23,7 @@ const getAqiInfo = (aqi: number): { text: string, color: string } => {
 
 export default function Weather() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -58,6 +60,13 @@ export default function Weather() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    // Scroll to the rightmost end if there is an overflow
+    if (scrollRef.current) {
+        scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [weather]);
+
   if (!weather) {
     return <div className="h-5" />; // Return an empty div with a fixed height to prevent layout shifts
   }
@@ -65,9 +74,11 @@ export default function Weather() {
   const aqiInfo = getAqiInfo(weather.aqi);
 
   return (
-    <div className="text-base md:text-lg text-white/80 mt-1 capitalize flex items-center gap-4">
-       <span><span className="font-bold">{weather.temp}°C</span>, {weather.description}</span>
-       <span className={aqiInfo.color}><span className="font-bold">AQI: {weather.aqi} ({aqiInfo.text})</span></span>
+    <div ref={scrollRef} className="max-w-full overflow-x-auto whitespace-nowrap pb-1">
+      <div className="text-base md:text-lg text-white/80 mt-1 capitalize inline-flex items-center gap-4">
+        <span><span className="font-bold">{weather.temp}°C</span>, {weather.description}</span>
+        <span className={aqiInfo.color}><span className="font-bold">AQI: {weather.aqi} ({aqiInfo.text})</span></span>
+      </div>
     </div>
   );
 }

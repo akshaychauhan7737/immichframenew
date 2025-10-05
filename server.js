@@ -33,20 +33,17 @@ const immichProxy = createProxyMiddleware({
 
 
 // Weather API proxies
-const openWeatherProxy = (path) => createProxyMiddleware({
+const openWeatherProxy = (targetPath) => createProxyMiddleware({
     target: 'https://api.openweathermap.org',
     changeOrigin: true,
-    pathRewrite: (p, req) => {
-        // Build the new path with all required query parameters.
-        const url = new URL(req.url, 'http://localhost'); // base url doesn't matter here
+    pathRewrite: (path, req) => `/data/2.5/${targetPath}`,
+    onProxyReq: (proxyReq, req, res) => {
+        const url = new URL(req.url, `http://${req.headers.host}`);
         url.searchParams.set('lat', LATITUDE);
         url.searchParams.set('lon', LONGITUDE);
         url.searchParams.set('units', 'metric');
         url.searchParams.set('appid', OPENWEATHER_KEY);
-        
-        // Replace the original path prefix with the target path and add the new query string.
-        const newPath = `/data/2.5/${path}${url.search}`;
-        return newPath;
+        proxyReq.path = url.pathname + url.search;
     },
     logLevel: 'info',
 });
@@ -130,13 +127,13 @@ const server = http.createServer((req, res) => {
   fs.readFile(filePath, (error, content) => {
     if (error) {
       if (error.code == 'ENOENT') {
-        // If file not found, serve index.html for client-side routing
-        fs.readFile(path.join(STATIC_DIR, 'index.html'), (err, content) => {
+        // If file not found, serve the 404 page
+        fs.readFile(path.join(STATIC_DIR, '404.html'), (err, content) => {
           if (err) {
             res.writeHead(500);
             res.end(`Sorry, check with the site admin for error: ${err.code} ..\n`);
           } else {
-            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.writeHead(404, { 'Content-Type': 'text/html' });
             res.end(content, 'utf-8');
           }
         });

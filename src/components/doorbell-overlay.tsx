@@ -23,6 +23,17 @@ export default function DoorbellOverlay() {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isShowing && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      // Scroll to the rightmost edge after the component is rendered
+      setTimeout(() => {
+        container.scrollLeft = container.scrollWidth;
+      }, 0);
+    }
+  }, [isShowing]);
 
   const hideOverlay = () => {
     setIsShowing(false);
@@ -97,13 +108,25 @@ export default function DoorbellOverlay() {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="relative w-full h-full max-w-6xl max-h-6xl aspect-video bg-black overflow-hidden">
-        <iframe
-          src={VIDEO_URL}
-          title="Doorbell Camera"
-          className="w-full h-full border-0"
-          allow="autoplay; encrypted-media"
-        />
+      <div className="relative w-full max-w-6xl h-[56.25vw] max-h-full sm:h-full sm:max-h-[80vh] bg-black">
+        <div 
+          ref={scrollContainerRef}
+          className="w-full h-full overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          <iframe
+            src={VIDEO_URL}
+            title="Doorbell Camera"
+            className="border-0"
+            style={{ width: '1280px', height: '100%' }}
+            scrolling="no"
+          />
+        </div>
         <button
           onClick={hideOverlay}
           className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-2 hover:bg-black/75 transition-colors z-10"

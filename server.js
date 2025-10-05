@@ -1,5 +1,6 @@
 
 const http = require('http');
+const https = require('https');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
@@ -31,25 +32,21 @@ const immichProxy = createProxyMiddleware({
   logLevel: 'info',
 });
 
-
-// Weather API proxies
-const openWeatherProxy = (targetPath) => createProxyMiddleware({
-    target: 'https://api.openweathermap.org',
-    changeOrigin: true,
-    pathRewrite: (path, req) => `/data/2.5/${targetPath}`,
-    onProxyReq: (proxyReq, req, res) => {
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        url.searchParams.set('lat', LATITUDE);
-        url.searchParams.set('lon', LONGITUDE);
-        url.searchParams.set('units', 'metric');
-        url.searchParams.set('appid', OPENWEATHER_KEY);
-        proxyReq.path = url.pathname + url.search;
-    },
-    logLevel: 'info',
-});
-
-const weatherProxy = openWeatherProxy('weather');
-const airPollutionProxy = openWeatherProxy('air_pollution');
+// Helper function to make API calls to OpenWeatherMap
+const fetchOpenWeather = (apiPath, req, res) => {
+    const url = `https://api.openweathermap.org/data/2.5/${apiPath}?lat=${LATITUDE}&lon=${LONGITUDE}&units=metric&appid=${OPENWEATHER_KEY}`;
+    
+    https.get(url, (apiRes) => {
+        // Pass through status code and headers from OpenWeatherMap
+        res.writeHead(apiRes.statusCode, apiRes.headers);
+        // Pipe the response body directly to the client
+        apiRes.pipe(res, { end: true });
+    }).on('error', (e) => {
+        console.error(`Error fetching from OpenWeatherMap: ${e.message}`);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Failed to fetch weather data' }));
+    });
+};
 
 
 // --- WebSocket Server Setup ---
@@ -81,10 +78,10 @@ const server = http.createServer((req, res) => {
     return immichProxy(req, res);
   }
   if (pathname.startsWith('/api/weather')) {
-    return weatherProxy(req, res);
+    return fetchOpenWeather('weather', req, res);
   }
   if (pathname.startsWith('/api/air_pollution')) {
-    return airPollutionProxy(req, res);
+    return fetchOpenWeather('air_pollution', req, res);
   }
   
   // Health check endpoint

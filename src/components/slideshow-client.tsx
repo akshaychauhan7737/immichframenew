@@ -10,8 +10,8 @@ import { LoaderCircle, MapPin } from "lucide-react";
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import Weather from "./weather";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
-import SlideshowLauncher from "./slideshow-launcher";
 import { Button } from "./ui/button";
+import SlideshowLauncher from "./slideshow-launcher";
 
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
 const STORAGE_KEY = "slideshow_state";

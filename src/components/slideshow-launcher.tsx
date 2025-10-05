@@ -1,7 +1,6 @@
 
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 
@@ -19,17 +18,17 @@ export default function SlideshowLauncher({ buckets, onClose }: { buckets: Immic
   const handleReset = () => {
     localStorage.removeItem(STORAGE_KEY);
     onClose?.();
-    router.push("/slideshow");
+    router.push("/");
   };
 
   const handleResume = () => {
     onClose?.();
-    router.push('/slideshow');
+    // Simply closing the dialog will resume the slideshow
   }
   
   const handleBucketClick = (bucketTime: string) => {
     onClose?.();
-    router.push(`/slideshow?bucket=${bucketTime}`);
+    router.push(`/?bucket=${bucketTime}`);
   }
 
   const getBucketDisplayName = (timeBucket: string) => {
@@ -49,9 +48,7 @@ export default function SlideshowLauncher({ buckets, onClose }: { buckets: Immic
     }
   };
 
-  // Determine if this is being rendered in a dialog
-  const isDialog = !!onClose;
-
+  // This is being rendered in a dialog
   const cardContent = (
     <>
         <CardHeader>
@@ -92,21 +89,11 @@ export default function SlideshowLauncher({ buckets, onClose }: { buckets: Immic
           </div>
         </CardContent>
     </>
-  )
-
-  if (isDialog) {
-    return (
-        <div className="w-full">
-            {cardContent}
-        </div>
-    );
-  }
+  );
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+    <div className="w-full">
         {cardContent}
-      </Card>
     </div>
   );
 }

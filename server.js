@@ -36,12 +36,18 @@ const immichProxy = createProxyMiddleware({
 const fetchOpenWeather = (apiPath, req, res) => {
     const url = `https://api.openweathermap.org/data/2.5/${apiPath}?lat=${LATITUDE}&lon=${LONGITUDE}&units=metric&appid=${OPENWEATHER_KEY}`;
     
-    https.get(url, (apiRes) => {
+    const apiRequest = https.get(url, (apiRes) => {
         // Pass through status code and headers from OpenWeatherMap
-        res.writeHead(apiRes.statusCode, apiRes.headers);
+        res.writeHead(apiRes.statusCode, {
+            ...apiRes.headers,
+            // Ensure correct content-type for JSON responses
+            'Content-Type': 'application/json' 
+        });
         // Pipe the response body directly to the client
         apiRes.pipe(res, { end: true });
-    }).on('error', (e) => {
+    });
+
+    apiRequest.on('error', (e) => {
         console.error(`Error fetching from OpenWeatherMap: ${e.message}`);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ message: 'Failed to fetch weather data' }));
@@ -78,9 +84,11 @@ const server = http.createServer((req, res) => {
     return immichProxy(req, res);
   }
   if (pathname.startsWith('/api/weather')) {
+    // Path is just 'weather'
     return fetchOpenWeather('weather', req, res);
   }
   if (pathname.startsWith('/api/air_pollution')) {
+    // Path is just 'air_pollution'
     return fetchOpenWeather('air_pollution', req, res);
   }
   

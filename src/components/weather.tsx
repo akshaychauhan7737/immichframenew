@@ -61,11 +61,17 @@ export default function Weather() {
   }, []);
 
   useEffect(() => {
-    // Scroll to the rightmost end if there is an overflow
+    // After weather data is set and the component re-renders,
+    // scroll to the rightmost end if there is an overflow.
     if (scrollRef.current) {
-        scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+        // A short delay can help ensure the DOM is updated before scrolling
+        setTimeout(() => {
+            if(scrollRef.current) {
+                scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+            }
+        }, 100);
     }
-  }, [weather]);
+  }, [weather]); // Rerun when weather data changes
 
   if (!weather) {
     return <div className="h-5" />; // Return an empty div with a fixed height to prevent layout shifts
@@ -74,11 +80,20 @@ export default function Weather() {
   const aqiInfo = getAqiInfo(weather.aqi);
 
   return (
-    <div ref={scrollRef} className="max-w-full overflow-x-auto whitespace-nowrap pb-1">
+    <div ref={scrollRef} className="max-w-full overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
       <div className="text-base md:text-lg text-white/80 mt-1 capitalize inline-flex items-center gap-4">
         <span><span className="font-bold">{weather.temp}°C</span>, {weather.description}</span>
         <span className={aqiInfo.color}><span className="font-bold">AQI: {weather.aqi} ({aqiInfo.text})</span></span>
       </div>
+      <style jsx>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }

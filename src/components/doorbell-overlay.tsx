@@ -4,33 +4,32 @@ import { useState, useEffect, useRef } from 'react';
 
 const VIDEO_URL = 'http://192.168.29.210:8080/video.cgi';
 const DISPLAY_DURATION_MS = 30000; // 30 seconds
-const POLLING_INTERVAL_MS = 2000; // 2 seconds
-
-interface DoorbellEvent {
-  timestamp: string;
-}
+const WS_URL = `ws://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:3001`;
 
 export default function DoorbellOverlay() {
   const [isShowing, setIsShowing] = useState(false);
-  const lastEventTimestampRef = useRef<string | null>(null);
+  const isShowingRef = useRef(isShowing);
+  isShowingRef.current = isShowing;
+  const ws = useRef<WebSocket | null>(null);
+  const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const pollForDoorbellEvent = async () => {
-      try {
-        // Add a cache-busting query parameter to prevent the browser from serving a stale file
-        const response = await fetch(`/api/doorbell.json?t=${new Date().getTime()}`);
-        if (!response.ok) {
-          // The file might not exist yet, which is fine.
-          return;
-        }
+  const connect = () => {
+    console.log(`Connecting to WebSocket at ${WS_URL}...`);
+    ws.current = new WebSocket(WS_URL);
 
-        const data: DoorbellEvent = await response.json();
-        const newTimestamp = data.timestamp;
+    ws.current.onopen = () => {
+      console.log('WebSocket connected.');
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current);
+        reconnectTimer.current = null;
+      }
+    };
 
-        // If we have a new, valid timestamp and the overlay is not already showing
-        if (newTimestamp && newTimestamp !== lastEventTimestampRef.current && !isShowing) {
-          console.log(`New doorbell event detected: ${newTimestamp}`);
-          lastEventTimestampRef.current = newTimestamp;
+    ws.current.onmessage = (event) => {
+      if (event.data === 'doorbell-ring') {
+        // If the overlay is not already showing, show it.
+        if (!isShowingRef.current) {
+          console.log('New doorbell event received via WebSocket.');
           setIsShowing(true);
 
           // Set a timer to hide the overlay after 30 seconds
@@ -38,17 +37,36 @@ export default function DoorbellOverlay() {
             setIsShowing(false);
             console.log('Doorbell overlay hidden.');
           }, DISPLAY_DURATION_MS);
+        } else {
+            console.log('Doorbell event received but overlay is already showing.');
         }
-      } catch (error) {
-        // Silently fail if JSON is invalid or network error
       }
     };
 
-    const intervalId = setInterval(pollForDoorbellEvent, POLLING_INTERVAL_MS);
+    ws.current.onclose = () => {
+      console.log('WebSocket disconnected. Attempting to reconnect in 5 seconds...');
+      if (!reconnectTimer.current) {
+        reconnectTimer.current = setTimeout(connect, 5000);
+      }
+    };
 
-    // Cleanup interval on component unmount
-    return () => clearInterval(intervalId);
-  }, [isShowing]); // Re-run effect dependencies on `isShowing` to stop polling while active
+    ws.current.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      ws.current?.close(); // This will trigger the onclose event and reconnection logic
+    };
+  };
+
+  useEffect(() => {
+    connect();
+
+    // Cleanup on component unmount
+    return () => {
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current);
+      }
+      ws.current?.close();
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   if (!isShowing) {
     return null;

@@ -6,23 +6,20 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Create the production image with Nginx
-FROM nginx:1.25-alpine
+# Stage 2: Create the production image with Node.js server
+FROM node:18-alpine
 WORKDIR /app
 
 # Copy built assets from the builder stage
 COPY --from=builder /app/out ./out
+# Copy the server and package files
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/server.js ./
 
-# Copy Nginx configuration files
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
+# Install only production dependencies
+RUN npm install --omit=dev
 
-# Copy and set permissions for the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+EXPOSE 3001
 
-# Expose port 80 for Nginx
-EXPOSE 80
-
-# Set the entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
+# The command to start the server
+CMD ["node", "server.js"]

@@ -4,15 +4,18 @@ services:
   slideshow:
     build: .
     ports:
-      - "9002:80"
+      # Port for the web application and WebSocket
+      - "3001:3001"
+      # Port for the Nginx proxy (if you choose to re-enable it for Immich)
+      # You could also proxy Immich through the Node.js server
+      - "80:80" 
     environment:
-      # --- Immich Server Configuration ---
-      # These are now only used by the Nginx proxy at startup.
-      - NEXT_PUBLIC_IMMICH_API_URL=http://192.168.29.3:2283
-      - NEXT_PUBLIC_IMMICH_API_KEY=isqXAFo82NCwDd99wU7LDXILBDrY2fwGRIqcHlfUdZc
-      - OPENWEATHER_API_KEY=694636f0bd371181225ff30313f478b2
-      - NEXT_PUBLIC_LATITUDE=28.4739606
-      - NEXT_PUBLIC_LONGITUDE=76.9758269
+      # These are now available to the Node.js server process
+      - IMMICH_API_URL=${IMMICH_API_URL:-http://192.168.29.3:2283}
+      - IMMICH_API_KEY=${IMMICH_API_KEY:-isqXAFo82NCwDd99wU7LDXILBDrY2fwGRIqcHlfUdZc}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-694636f0bd371181225ff30313f478b2}
+      - LATITUDE=${LATITUDE:-28.4739606}
+      - LONGITUDE=${LONGITUDE:-76.9758269}
     restart: unless-stopped
     networks:
       - slideshow-net

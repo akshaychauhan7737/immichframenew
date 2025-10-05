@@ -13,14 +13,24 @@ import { Separator } from "@/components/ui/separator";
 
 const STORAGE_KEY = "slideshow_state";
 
-export default function SlideshowLauncher({ buckets }: { buckets: ImmichBucket[] }) {
+export default function SlideshowLauncher({ buckets, onClose }: { buckets: ImmichBucket[], onClose?: () => void }) {
   const router = useRouter();
 
   const handleReset = () => {
     localStorage.removeItem(STORAGE_KEY);
-    // Redirect to the slideshow which will start from the beginning
-    router.push("/");
+    onClose?.();
+    router.push("/slideshow");
   };
+
+  const handleResume = () => {
+    onClose?.();
+    router.push('/slideshow');
+  }
+  
+  const handleBucketClick = (bucketTime: string) => {
+    onClose?.();
+    router.push(`/slideshow?bucket=${bucketTime}`);
+  }
 
   const getBucketDisplayName = (timeBucket: string) => {
     try {
@@ -39,9 +49,11 @@ export default function SlideshowLauncher({ buckets }: { buckets: ImmichBucket[]
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+  // Determine if this is being rendered in a dialog
+  const isDialog = !!onClose;
+
+  const cardContent = (
+    <>
         <CardHeader>
           <CardTitle>Immich Slideshow Launcher</CardTitle>
           <CardDescription>
@@ -50,8 +62,8 @@ export default function SlideshowLauncher({ buckets }: { buckets: ImmichBucket[]
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild className="flex-1" size="lg">
-              <Link href="/">Resume Slideshow</Link>
+            <Button onClick={handleResume} className="flex-1" size="lg">
+              Resume Slideshow
             </Button>
             <Button onClick={handleReset} variant="outline" className="flex-1" size="lg">
               Clear Saved State & Restart
@@ -66,18 +78,34 @@ export default function SlideshowLauncher({ buckets }: { buckets: ImmichBucket[]
               <div className="p-4">
                 {buckets.map((bucket) => (
                   <div key={bucket.timeBucket}>
-                    <Link href={`/slideshow/${bucket.timeBucket}`}>
-                      <div className="p-2 rounded-md hover:bg-accent cursor-pointer flex justify-between items-center">
+                    <button
+                      onClick={() => handleBucketClick(bucket.timeBucket)}
+                      className="w-full p-2 rounded-md hover:bg-accent cursor-pointer flex justify-between items-center text-left"
+                    >
                         <span>{getBucketDisplayName(bucket.timeBucket)}</span>
                         <span className="text-sm text-muted-foreground">{bucket.count} items</span>
-                      </div>
-                    </Link>
+                    </button>
                   </div>
                 ))}
               </div>
             </ScrollArea>
           </div>
         </CardContent>
+    </>
+  )
+
+  if (isDialog) {
+    return (
+        <div className="w-full">
+            {cardContent}
+        </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl">
+        {cardContent}
       </Card>
     </div>
   );

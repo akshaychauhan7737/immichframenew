@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export default function NotFound() {
           <div className="flex justify-center gap-4">
             <Button onClick={() => router.back()}>Go Back</Button>
             <Button variant="outline" asChild>
-              <Link href="/launcher">Go to Launcher</Link>
+              <Link href="/">Go to Launcher</Link>
             </Button>
           </div>
         </CardContent>

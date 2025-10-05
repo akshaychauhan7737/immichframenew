@@ -3,13 +3,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { LoaderCircle, MapPin } from "lucide-react";
 
 import type { ImmichAsset, ImmichBucket } from "@/lib/types";
 import Weather from "./weather";
+import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
+import SlideshowLauncher from "./slideshow-launcher";
+import { Button } from "./ui/button";
 
 const VIDEO_TIMEOUT_S = 60; // Max time to wait for a video to load/play
 const STORAGE_KEY = "slideshow_state";
@@ -82,6 +84,7 @@ export default function SlideshowClient({
   const [detailedAsset, setDetailedAsset] = useState<ImmichAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
+  const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -261,15 +264,22 @@ export default function SlideshowClient({
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-10 p-4 md:p-6 bg-gradient-to-b from-black/50 to-transparent">
         {currentAsset && (
-          <Link href="/launcher" className="cursor-pointer">
-            <h3 className="font-bold text-lg md:text-xl text-white/90">{format(assetDate, "MMMM d, yyyy")}</h3>
-            {locationString && (
-                 <div className="flex items-center gap-2 text-base md:text-lg text-white/80 mt-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{locationString}</span>
-                </div>
-            )}
-          </Link>
+            <Dialog open={isLauncherOpen} onOpenChange={setIsLauncherOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" className="h-auto p-0 text-left flex flex-col items-start hover:bg-transparent">
+                        <h3 className="font-bold text-lg md:text-xl text-white/90">{format(assetDate, "MMMM d, yyyy")}</h3>
+                        {locationString && (
+                            <div className="flex items-center gap-2 text-base md:text-lg text-white/80 mt-1">
+                                <MapPin className="w-4 h-4" />
+                                <span>{locationString}</span>
+                            </div>
+                        )}
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-background/90 backdrop-blur-sm border-white/20 text-foreground p-0 max-w-2xl">
+                    <SlideshowLauncher buckets={buckets} onClose={() => setIsLauncherOpen(false)} />
+                </DialogContent>
+            </Dialog>
         )}
       </header>
 

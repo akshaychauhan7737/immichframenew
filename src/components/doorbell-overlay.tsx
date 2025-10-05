@@ -22,12 +22,19 @@ export default function DoorbellOverlay() {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   
-  const hideOverlay = () => {
+  const hideOverlay = async () => {
     setIsShowing(false);
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
       hideTimer.current = null;
+    }
+    // Release the wake lock when the overlay is hidden
+    if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+        console.log('Wake Lock released.');
     }
     console.log('Doorbell overlay hidden.');
   };
@@ -45,12 +52,21 @@ export default function DoorbellOverlay() {
       }
     };
 
-    ws.current.onmessage = (event) => {
+    ws.current.onmessage = async (event) => {
       if (event.data === 'doorbell-ring') {
-        // If the overlay is not already showing, show it.
         if (!isShowingRef.current) {
           console.log('New doorbell event received via WebSocket.');
           setIsShowing(true);
+
+          // Request a wake lock when the overlay is shown
+          if ('wakeLock' in navigator) {
+            try {
+              wakeLockRef.current = await navigator.wakeLock.request('screen');
+              console.log('Wake Lock acquired.');
+            } catch (err: any) {
+              console.error(`${err.name}, ${err.message}`);
+            }
+          }
 
           // Set a timer to hide the overlay after 30 seconds
           hideTimer.current = setTimeout(() => {
@@ -71,12 +87,25 @@ export default function DoorbellOverlay() {
 
     ws.current.onerror = (error) => {
       console.error('WebSocket error:', error);
-      ws.current?.close(); // This will trigger the onclose event and reconnection logic
+      ws.current?.close();
     };
   };
 
   useEffect(() => {
     connect();
+
+    const handleVisibilityChange = async () => {
+      if (wakeLockRef.current !== null && document.visibilityState === 'visible' && isShowingRef.current) {
+        try {
+            wakeLockRef.current = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock re-acquired after visibility change.');
+        } catch (err: any) {
+            console.error(`${err.name}, ${err.message}`);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup on component unmount
     return () => {
@@ -86,9 +115,13 @@ export default function DoorbellOverlay() {
       if (hideTimer.current) {
         clearTimeout(hideTimer.current);
       }
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release();
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       ws.current?.close();
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   if (!isShowing) {
     return null;

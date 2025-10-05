@@ -79,6 +79,13 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
   
+  // Health check endpoint
+  if (pathname === '/api/server/ping') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ res: 'pong' }));
+    return;
+  }
+
   // Proxy API requests
   if (pathname.startsWith('/api/immich')) {
     return immichProxy(req, res);
@@ -90,13 +97,6 @@ const server = http.createServer((req, res) => {
   if (pathname.startsWith('/api/air_pollution')) {
     // Path is just 'air_pollution'
     return fetchOpenWeather('air_pollution', req, res);
-  }
-  
-  // Health check endpoint
-  if (pathname === '/api/server/ping') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ res: 'pong' }));
-    return;
   }
 
   // Endpoint to trigger the doorbell

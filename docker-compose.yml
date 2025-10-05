@@ -6,9 +6,6 @@ services:
     ports:
       # Port for the web application and WebSocket
       - "3001:3001"
-      # Port for the Nginx proxy (if you choose to re-enable it for Immich)
-      # You could also proxy Immich through the Node.js server
-      - "80:80" 
     environment:
       # These are now available to the Node.js server process
       - IMMICH_API_URL=${IMMICH_API_URL:-http://192.168.29.3:2283}

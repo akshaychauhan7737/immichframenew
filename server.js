@@ -10,9 +10,20 @@ const PORT = process.env.PORT || 3001;
 const STATIC_DIR = path.join(__dirname, 'out');
 const IMMICH_URL = process.env.IMMICH_API_URL;
 const IMMICH_KEY = process.env.IMMICH_API_KEY;
+const OPENWEATHER_KEY = process.env.OPENWEATHER_API_KEY;
+const LATITUDE = process.env.LATITUDE;
+const LONGITUDE = process.env.LONGITUDE;
 
-if (!IMMICH_URL || !IMMICH_KEY) {
-  console.error('Missing IMMICH_API_URL or IMMICH_API_KEY environment variables.');
+if (!IMMICH_URL || !IMMICH_KEY || !OPENWEATHER_KEY || !LATITUDE || !LONGITUDE) {
+  console.error('FATAL: One or more required environment variables are missing.');
+  console.error('Please check your docker-compose.yml file and ensure all variables are set.');
+  console.error('Missing variables:', {
+    IMMICH_URL: !IMMICH_URL,
+    IMMICH_API_KEY: !IMMICH_KEY,
+    OPENWEATHER_API_KEY: !OPENWEATHER_KEY,
+    LATITUDE: !LATITUDE,
+    LONGITUDE: !LONGITUDE,
+  });
   process.exit(1);
 }
 
@@ -39,10 +50,10 @@ const openWeatherProxy = (path) => createProxyMiddleware({
     pathRewrite: { [`^/api/${path}`]: `/data/2.5/${path}` },
     onProxyReq: (proxyReq, req, res) => {
         const url = new URL(proxyReq.path, 'https://api.openweathermap.org');
-        url.searchParams.set('lat', process.env.LATITUDE || '');
-        url.searchParams.set('lon', process.env.LONGITUDE || '');
+        url.searchParams.set('lat', LATITUDE);
+        url.searchParams.set('lon', LONGITUDE);
         url.searchParams.set('units', 'metric');
-        url.searchParams.set('appid', process.env.OPENWEATHER_API_KEY || '');
+        url.searchParams.set('appid', OPENWEATHER_KEY);
         proxyReq.path = url.pathname + url.search;
     },
     logLevel: 'info',

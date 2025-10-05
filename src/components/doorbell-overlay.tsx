@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 
 const VIDEO_URL = 'http://192.168.29.210:8080/video.cgi';
 const DISPLAY_DURATION_MS = 30000; // 30 seconds
@@ -21,6 +22,16 @@ export default function DoorbellOverlay() {
   isShowingRef.current = isShowing;
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
+  const hideTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const hideOverlay = () => {
+    setIsShowing(false);
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    console.log('Doorbell overlay hidden.');
+  };
 
   const connect = () => {
     // Always connect to the root path
@@ -45,9 +56,8 @@ export default function DoorbellOverlay() {
           setIsShowing(true);
 
           // Set a timer to hide the overlay after 30 seconds
-          setTimeout(() => {
-            setIsShowing(false);
-            console.log('Doorbell overlay hidden.');
+          hideTimer.current = setTimeout(() => {
+            hideOverlay();
           }, DISPLAY_DURATION_MS);
         } else {
             console.log('Doorbell event received but overlay is already showing.');
@@ -76,6 +86,9 @@ export default function DoorbellOverlay() {
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
       }
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+      }
       ws.current?.close();
     };
   }, []); // Empty dependency array ensures this runs only once on mount
@@ -85,14 +98,21 @@ export default function DoorbellOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
-      <div className="w-full h-full max-w-4xl max-h-4xl aspect-video bg-black">
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+      <div className="relative w-full h-full max-w-4xl max-h-4xl aspect-video bg-black">
         <iframe
           src={VIDEO_URL}
           title="Doorbell Camera"
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media"
         />
+        <button
+          onClick={hideOverlay}
+          className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-2 hover:bg-black/75 transition-colors z-10"
+          aria-label="Close doorbell video"
+        >
+          <X className="h-6 w-6" />
+        </button>
       </div>
     </div>
   );

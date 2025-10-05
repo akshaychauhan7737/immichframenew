@@ -24,12 +24,13 @@ if (!IMMICH_URL || !IMMICH_KEY || !OPENWEATHER_KEY || !LATITUDE || !LONGITUDE) {
 const immichProxy = createProxyMiddleware({
   target: IMMICH_URL,
   changeOrigin: true,
-  pathRewrite: { '^/api/immich': '/api' }, // Rewrite /api/immich to /api for Immich server
-  onProxyReq: (proxyReq, req, res) => {
-    proxyReq.setHeader('x-api-key', IMMICH_KEY);
+  pathRewrite: { '^/api/immich': '/api' },
+  headers: {
+    'x-api-key': IMMICH_KEY,
   },
-  logLevel: 'info'
+  logLevel: 'info',
 });
+
 
 // Weather API proxies
 const openWeatherProxy = (path) => createProxyMiddleware({

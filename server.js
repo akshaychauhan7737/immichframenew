@@ -39,8 +39,8 @@ const openWeatherProxy = (path) => createProxyMiddleware({
     pathRewrite: { [`^/api/${path}`]: `/data/2.5/${path}` },
     onProxyReq: (proxyReq, req, res) => {
         const url = new URL(proxyReq.path, 'https://api.openweathermap.org');
-        url.searchParams.set('lat', process.env.LATITUDE || '28.4739606');
-        url.searchParams.set('lon', process.env.LONGITUDE || '76.9758269');
+        url.searchParams.set('lat', process.env.LATITUDE || '');
+        url.searchParams.set('lon', process.env.LONGITUDE || '');
         url.searchParams.set('units', 'metric');
         url.searchParams.set('appid', process.env.OPENWEATHER_API_KEY || '');
         proxyReq.path = url.pathname + url.search;

@@ -12,7 +12,7 @@ const getWsUrl = () => {
     return 'ws://localhost:3001'; // Default for non-browser environments
   }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  // Connect to the root path for WebSocket
+  // Always connect to the root path for WebSocket
   return `${protocol}//${window.location.host}`;
 };
 
@@ -34,10 +34,8 @@ export default function DoorbellOverlay() {
   };
 
   const connect = () => {
-    // Always connect to the root path
     const WS_URL = getWsUrl();
     console.log(`Connecting to WebSocket at ${WS_URL}...`);
-    // Ensure the path is just the host
     ws.current = new WebSocket(WS_URL);
 
     ws.current.onopen = () => {

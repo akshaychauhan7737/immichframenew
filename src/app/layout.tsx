@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import DoorbellOverlay from "@/components/doorbell-overlay";
 
 export const metadata: Metadata = {
   title: "Immich Slideshow",
@@ -26,6 +27,7 @@ export default function RootLayout({
         style={{fontFamily: "'PT Sans', sans-serif"}}
       >
         {children}
+        <DoorbellOverlay />
       </body>
     </html>
   );

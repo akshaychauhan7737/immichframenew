@@ -86,7 +86,7 @@ const server = http.createServer((req, res) => {
         res.end(`Sorry, check with the site admin for error: ${error.code} ..\n`);
       }
     } else {
-      reswriteHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, { 'Content-Type': contentType });
       res.end(content, 'utf-8');
     }
   });

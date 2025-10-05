@@ -4,7 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 
 const VIDEO_URL = 'http://192.168.29.210:8080/video.cgi';
 const DISPLAY_DURATION_MS = 30000; // 30 seconds
-const WS_URL = `ws://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:3001`;
+
+const getWsUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'ws://localhost:3001'; // Default for non-browser environments
+  }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.hostname}:3001`;
+};
 
 export default function DoorbellOverlay() {
   const [isShowing, setIsShowing] = useState(false);
@@ -14,6 +21,7 @@ export default function DoorbellOverlay() {
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
 
   const connect = () => {
+    const WS_URL = getWsUrl();
     console.log(`Connecting to WebSocket at ${WS_URL}...`);
     ws.current = new WebSocket(WS_URL);
 

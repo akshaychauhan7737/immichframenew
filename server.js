@@ -1,3 +1,4 @@
+
 const http = require('http');
 const WebSocket = require('ws');
 const fs = require('fs');
@@ -7,6 +8,49 @@ const { URL } = require('url');
 
 const PORT = process.env.PORT || 3001;
 const STATIC_DIR = path.join(__dirname, 'out');
+const IMMICH_URL = process.env.IMMICH_API_URL;
+const IMMICH_KEY = process.env.IMMICH_API_KEY;
+
+if (!IMMICH_URL || !IMMICH_KEY) {
+  console.error('Missing IMMICH_API_URL or IMMICH_API_KEY environment variables.');
+  process.exit(1);
+}
+
+// --- API Proxy Setup ---
+const immichProxy = createProxyMiddleware({
+  target: IMMICH_URL,
+  changeOrigin: true,
+  pathRewrite: { '^/api/immich': '/api' }, // Rewrite /api/immich to /api for Immich server
+  onProxyReq: (proxyReq, req, res) => {
+    proxyReq.setHeader('x-api-key', IMMICH_KEY);
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    // Remove security headers that might block in-browser rendering
+    delete proxyRes.headers['x-frame-options'];
+    delete proxyRes.headers['content-security-policy'];
+  },
+  logLevel: 'info'
+});
+
+// Weather API proxies
+const openWeatherProxy = (path) => createProxyMiddleware({
+    target: 'https://api.openweathermap.org',
+    changeOrigin: true,
+    pathRewrite: { [`^/api/${path}`]: `/data/2.5/${path}` },
+    onProxyReq: (proxyReq, req, res) => {
+        const url = new URL(proxyReq.path, 'https://api.openweathermap.org');
+        url.searchParams.set('lat', process.env.LATITUDE || '28.4739606');
+        url.searchParams.set('lon', process.env.LONGITUDE || '76.9758269');
+        url.searchParams.set('units', 'metric');
+        url.searchParams.set('appid', process.env.OPENWEATHER_API_KEY || '');
+        proxyReq.path = url.pathname + url.search;
+    },
+    logLevel: 'info',
+});
+
+const weatherProxy = openWeatherProxy('weather');
+const airPollutionProxy = openWeatherProxy('air_pollution');
+
 
 // --- WebSocket Server Setup ---
 const wss = new WebSocket.Server({ noServer: true });
@@ -31,6 +75,18 @@ function broadcast(message) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
+  
+  // Proxy API requests
+  if (pathname.startsWith('/api/immich')) {
+    return immichProxy(req, res);
+  }
+  if (pathname.startsWith('/api/weather')) {
+    return weatherProxy(req, res);
+  }
+  if (pathname.startsWith('/api/air_pollution')) {
+    return airPollutionProxy(req, res);
+  }
+  
 
   // Endpoint to trigger the doorbell
   if (pathname === '/doorbell-trigger') {
@@ -94,9 +150,15 @@ const server = http.createServer((req, res) => {
 
 // Upgrade HTTP server to handle WebSockets
 server.on('upgrade', (request, socket, head) => {
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit('connection', ws, request);
-  });
+  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+
+  if (pathname === '/') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 server.listen(PORT, () => {

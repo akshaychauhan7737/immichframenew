@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -10,7 +11,8 @@ const getWsUrl = () => {
     return 'ws://localhost:3001'; // Default for non-browser environments
   }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.hostname}:3001`;
+  // Connect to the root path for WebSocket
+  return `${protocol}//${window.location.host}`;
 };
 
 export default function DoorbellOverlay() {
@@ -21,8 +23,10 @@ export default function DoorbellOverlay() {
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
 
   const connect = () => {
+    // Always connect to the root path
     const WS_URL = getWsUrl();
     console.log(`Connecting to WebSocket at ${WS_URL}...`);
+    // Ensure the path is just the host
     ws.current = new WebSocket(WS_URL);
 
     ws.current.onopen = () => {

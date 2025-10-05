@@ -8,12 +8,12 @@ services:
       # Port for the web application and WebSocket
       - "3001:3001"
     environment:
-      # These are now available to the Node.js server process
-      - IMMICH_API_URL=${IMMICH_API_URL:-http://192.168.29.3:2283}
-      - IMMICH_API_KEY=${IMMICH_API_KEY:-isqXAFo82NCwDd99wU7LDXILBDrY2fwGRIqcHlfUdZc}
-      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-694636f0bd371181225ff30313f478b2}
-      - LATITUDE=${LATITUDE:-28.4739606}
-      - LONGITUDE=${LONGITUDE:-76.9758269}
+      # These are now available to the Node.js server process from the .env file
+      - IMMICH_API_URL
+      - IMMICH_API_KEY
+      - OPENWEATHER_API_KEY
+      - LATITUDE
+      - LONGITUDE
     restart: unless-stopped
     networks:
       - slideshow-net

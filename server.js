@@ -87,6 +87,12 @@ const server = http.createServer((req, res) => {
     return airPollutionProxy(req, res);
   }
   
+  // Health check endpoint
+  if (pathname === '/api/server/ping') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ res: 'pong' }));
+    return;
+  }
 
   // Endpoint to trigger the doorbell
   if (pathname === '/doorbell-trigger') {

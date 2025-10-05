@@ -36,14 +36,17 @@ const immichProxy = createProxyMiddleware({
 const openWeatherProxy = (path) => createProxyMiddleware({
     target: 'https://api.openweathermap.org',
     changeOrigin: true,
-    pathRewrite: { [`^/api/${path}`]: `/data/2.5/${path}` },
-    onProxyReq: (proxyReq, req, res) => {
-        const url = new URL(proxyReq.path, 'https://api.openweathermap.org');
+    pathRewrite: (p, req) => {
+        // Build the new path with all required query parameters.
+        const url = new URL(req.url, 'http://localhost'); // base url doesn't matter here
         url.searchParams.set('lat', LATITUDE);
         url.searchParams.set('lon', LONGITUDE);
         url.searchParams.set('units', 'metric');
         url.searchParams.set('appid', OPENWEATHER_KEY);
-        proxyReq.path = url.pathname + url.search;
+        
+        // Replace the original path prefix with the target path and add the new query string.
+        const newPath = `/data/2.5/${path}${url.search}`;
+        return newPath;
     },
     logLevel: 'info',
 });

@@ -12,23 +12,23 @@ import { Separator } from "@/components/ui/separator";
 
 const STORAGE_KEY = "slideshow_state";
 
-export default function SlideshowLauncher({ buckets, onClose }: { buckets: ImmichBucket[], onClose?: () => void }) {
+interface SlideshowLauncherProps {
+  buckets: ImmichBucket[];
+  onBucketSelect: (bucketTime: string) => void;
+}
+
+export default function SlideshowLauncher({ buckets, onBucketSelect }: SlideshowLauncherProps) {
   const router = useRouter();
 
   const handleReset = () => {
     localStorage.removeItem(STORAGE_KEY);
-    onClose?.();
+    // Reload the page to start from the beginning
     router.push("/");
+    window.location.reload();
   };
-
-  const handleResume = () => {
-    onClose?.();
-    // Simply closing the dialog will resume the slideshow
-  }
   
   const handleBucketClick = (bucketTime: string) => {
-    onClose?.();
-    router.push(`/?bucket=${bucketTime}`);
+    onBucketSelect(bucketTime);
   }
 
   const getBucketDisplayName = (timeBucket: string) => {
@@ -52,20 +52,15 @@ export default function SlideshowLauncher({ buckets, onClose }: { buckets: Immic
   const cardContent = (
     <>
         <CardHeader>
-          <CardTitle>Immich Slideshow Launcher</CardTitle>
+          <CardTitle>Slideshow Launcher</CardTitle>
           <CardDescription>
-            Resume your slideshow or start from a specific time bucket.
+            Start the slideshow from a specific time bucket.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={handleResume} className="flex-1" size="lg">
-              Resume Slideshow
-            </Button>
-            <Button onClick={handleReset} variant="outline" className="flex-1" size="lg">
-              Clear Saved State & Restart
-            </Button>
-          </div>
+          <Button onClick={handleReset} variant="outline" className="w-full" size="lg">
+            Clear Saved State & Restart
+          </Button>
 
           <Separator />
 

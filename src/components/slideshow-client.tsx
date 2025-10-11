@@ -88,6 +88,7 @@ export default function SlideshowClient({
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const advanceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Screen Wake Lock
   useEffect(() => {
@@ -231,24 +232,73 @@ export default function SlideshowClient({
     }
   }, [isLoading, currentAssetIndex, assets.length, currentBucketIndex, buckets]);
 
+  // Handle manual bucket selection from launcher
+  const handleBucketSelect = useCallback(async (bucketTime: string) => {
+    if (isLoading) return;
+
+    const newBucketIndex = buckets.findIndex(b => b.timeBucket === bucketTime);
+    if (newBucketIndex === -1 || newBucketIndex === currentBucketIndex) return;
+
+    setIsLoading(true);
+    setDetailedAsset(null);
+    if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+    }
+
+    try {
+        const newAssets = await getNextBucketAssets(bucketTime);
+        if (newAssets.length > 0) {
+            setAssets(newAssets);
+            setCurrentBucketIndex(newBucketIndex);
+            setCurrentAssetIndex(0);
+        } else {
+            console.warn(`Selected bucket ${bucketTime} has no assets. Advancing to next.`);
+            // If the selected bucket is empty, just advance to the next one in sequence.
+            navigateToNext();
+        }
+    } catch (error) {
+        console.error(`Failed to load assets for bucket ${bucketTime}`, error);
+    } finally {
+        setIsLoading(false);
+        setIsLauncherOpen(false); // Close the dialog
+    }
+  }, [buckets, currentBucketIndex, isLoading, navigateToNext]);
+
   // Auto-advance logic for images
   useEffect(() => {
     if (isLoading || !currentAsset || currentAsset.type !== 'IMAGE') return;
     
-    const timer = setTimeout(navigateToNext, duration * 1000);
-    return () => clearTimeout(timer);
+    // Clear any existing timer before setting a new one
+    if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+    }
+    advanceTimerRef.current = setTimeout(navigateToNext, duration * 1000);
+
+    return () => {
+        if (advanceTimerRef.current) {
+            clearTimeout(advanceTimerRef.current);
+        }
+    };
   }, [currentAsset, isLoading, duration, navigateToNext]);
 
   // Timeout for stuck videos
   useEffect(() => {
     if (isLoading || !currentAsset || currentAsset.type !== 'VIDEO') return;
 
-    const videoStuckTimeout = setTimeout(() => {
+    // Clear any existing timer before setting a new one
+    if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+    }
+    advanceTimerRef.current = setTimeout(() => {
         console.warn(`Video stuck for ${VIDEO_TIMEOUT_S}s, advancing...`);
         navigateToNext();
     }, VIDEO_TIMEOUT_S * 1000);
 
-    return () => clearTimeout(videoStuckTimeout);
+    return () => {
+        if (advanceTimerRef.current) {
+            clearTimeout(advanceTimerRef.current);
+        }
+    };
   }, [currentAsset, isLoading, navigateToNext]);
 
   
@@ -277,7 +327,7 @@ export default function SlideshowClient({
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-background/90 backdrop-blur-sm border-white/20 text-foreground p-0 max-w-2xl">
-                    <SlideshowLauncher buckets={buckets} onClose={() => setIsLauncherOpen(false)} />
+                    <SlideshowLauncher buckets={buckets} onBucketSelect={handleBucketSelect} />
                 </DialogContent>
             </Dialog>
         )}
@@ -316,9 +366,13 @@ export default function SlideshowClient({
                             playsInline
                             muted
                             loop={false}
-                            onEnded={navigateToNext}
+                            onEnded={() => {
+                                if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+                                navigateToNext();
+                            }}
                             onError={(e) => {
                                 console.error("Video playback error", e);
+                                if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
                                 navigateToNext();
                             }}
                             className="w-full h-full object-contain"
